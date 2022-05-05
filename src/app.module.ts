@@ -9,6 +9,8 @@ import { FileModule } from './file/file.module';
 import { AuthModule } from './auth/auth.module';
 import { PostModule } from './post/post.module';
 import { FriendModule } from './friend/friend.module';
+import { VacancyModule } from './vacancy/vacancy.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { FriendModule } from './friend/friend.module';
     AuthModule,
     PostModule,
     FriendModule,
+    VacancyModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

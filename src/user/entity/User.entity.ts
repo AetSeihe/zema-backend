@@ -13,12 +13,15 @@ import {
 } from 'sequelize-typescript';
 import { City } from 'src/city/entity/City.entity';
 import { MIN_PASSWORD_LENGHT } from 'src/core/constants';
+import { Friend } from 'src/friend/entity/friend.entity';
+import { RequstFriend } from 'src/friend/entity/request.entity';
 import { locale } from 'src/locale';
 import { Comment } from 'src/post/enity/Comment.entity';
 import { Like } from 'src/post/enity/Like.entity';
 import { Post } from 'src/post/enity/Post.enity';
 import { EducationEnum } from 'src/types/EducationEnum';
 import { GenderEnum } from 'src/types/GenderEnum';
+import { Resume } from 'src/vacancy/entity/resume.enity';
 import { UserImage } from './UserImage.entity';
 
 const userDatabaseLocale = locale.user.database;
@@ -126,4 +129,13 @@ export class User extends Model {
 
   @HasMany(() => Comment)
   comments: Comment[];
+
+  @HasMany(() => Friend)
+  friends: Friend[];
+
+  @HasMany(() => RequstFriend)
+  requests: RequstFriend[];
+
+  @HasMany(() => Resume)
+  resumes: Resume[];
 }

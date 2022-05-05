@@ -25,6 +25,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @UseInterceptors(ClassSerializerInterceptor)
+  @UseGuards(JwtAuthGuard)
   @Get('/')
   getAll(@Query() options: UserGetAllOptionsDTO) {
     return this.userService.findAll(options);
