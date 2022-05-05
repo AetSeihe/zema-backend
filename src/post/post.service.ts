@@ -5,6 +5,7 @@ import {
   Inject,
   Injectable,
 } from '@nestjs/common';
+import sequelize from 'sequelize';
 import { JwtPayloadType } from 'src/auth/types/JwtPayload.type';
 import {
   COMMENT_REPOSITORY,
@@ -17,7 +18,9 @@ import { locale } from 'src/locale';
 import { User } from 'src/user/entity/User.entity';
 import { UserImage } from 'src/user/entity/UserImage.entity';
 import { AddCommentDTO } from './dto/add-comment.dto';
+import { CommentDto } from './dto/comment.dto';
 import { GetAllPostsDTO } from './dto/get-all-posts.dto';
+import { LikeDto } from './dto/like.dto';
 import { PostCreateDTO } from './dto/post-create.dto';
 import { PostDTO } from './dto/post.dto';
 import { SetLikeDTO } from './dto/set-like.dto';
@@ -50,6 +53,8 @@ export class PostService {
           include: [UserImage],
         },
         PostFiles,
+        Like,
+        Comment,
       ],
     });
     const allPostsDTO = allPosts.map((post) => new PostDTO(post.get()));
@@ -61,7 +66,30 @@ export class PostService {
 
   async getById(token: JwtPayloadType, postId: number) {
     const post = await this.postRepository.findByPk(postId, {
-      include: [Like, PostFiles, Comment],
+      include: [
+        {
+          model: User,
+          include: [UserImage],
+        },
+        {
+          model: Like,
+          include: [
+            {
+              model: User,
+              include: [UserImage],
+            },
+          ],
+        },
+        {
+          model: Comment,
+          include: [
+            {
+              model: User,
+              include: [UserImage],
+            },
+          ],
+        },
+      ],
     });
 
     if (!post) {
@@ -114,7 +142,7 @@ export class PostService {
       await like.destroy();
     }
 
-    return like;
+    return new LikeDto(like);
   }
 
   async addComment(token: JwtPayloadType, options: AddCommentDTO) {
@@ -124,7 +152,7 @@ export class PostService {
       text: options.text,
     });
 
-    return comment;
+    return new CommentDto(comment.get());
   }
 
   async deleteComment(token: JwtPayloadType, commentId: number) {
@@ -133,6 +161,6 @@ export class PostService {
       throw new ForbiddenException();
     }
     await comment.destroy();
-    return comment;
+    return new CommentDto(comment.get());
   }
 }

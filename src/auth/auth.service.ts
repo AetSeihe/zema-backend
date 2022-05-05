@@ -34,7 +34,6 @@ export class AuthService {
       userId: user.id,
     };
 
-
     const token = this.jwtService.sign(payload, {
       secret: this.configService.get('JWT_SECRET'),
     });
