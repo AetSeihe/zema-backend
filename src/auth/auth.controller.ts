@@ -13,7 +13,7 @@ import { UserSignUp } from 'src/user/dto/user-signup.dto';
 import { UserDTO } from 'src/user/dto/user.dto';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
-import { JwtPayloadType } from './types/JwtPayload.type';
+import { JwtPayloadType, RequestJwtPayloadType } from './types/JwtPayload.type';
 
 const localeService = locale.auth.service;
 
@@ -24,8 +24,8 @@ export class AuthController {
   @UseInterceptors(ClassSerializerInterceptor)
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Request() req, @Body() jwtPayload: JwtPayloadType) {
-    const token = await this.authService.login(jwtPayload);
+  async login(@Request() req) {
+    const token = await this.authService.login(req.user);
     return {
       message: localeService.signin,
       token: token.access_token,

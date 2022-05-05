@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module';
 import { CityModule } from './city/city.module';
 import { FileModule } from './file/file.module';
 import { AuthModule } from './auth/auth.module';
+import { PostModule } from './post/post.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AuthModule } from './auth/auth.module';
     CityModule,
     FileModule,
     AuthModule,
+    PostModule,
   ],
   controllers: [AppController],
   providers: [AppService],

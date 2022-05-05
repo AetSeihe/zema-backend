@@ -10,7 +10,7 @@ import { User } from './User.entity';
 @Table({
   modelName: 'user_image',
 })
-export class UserImage extends Model<UserImage> {
+export class UserImage extends Model {
   id: number;
 
   @ForeignKey(() => User)
@@ -18,9 +18,6 @@ export class UserImage extends Model<UserImage> {
     as: 'user_id',
   })
   userId: number;
-
-  user: User;
-  friend: User;
 
   @Column
   fileName: string;

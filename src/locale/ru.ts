@@ -1,6 +1,12 @@
 import { MIN_PASSWORD_LENGHT } from 'src/core/constants';
 
 export const ru = {
+  post: {
+    service: {
+      findAll: 'Все посты по вашему запросу',
+      findById: 'Пост найден!',
+    },
+  },
   user: {
     service: {
       findAll: 'Список всех пользователей',

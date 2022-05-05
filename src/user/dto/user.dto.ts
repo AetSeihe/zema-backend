@@ -11,6 +11,7 @@ export class UserDTO {
     Object.assign(this, partial);
     this.images =
       partial.images?.map((image) => new UserImageDTO(image.get())) || [];
+    this.password = undefined;
   }
 
   id: number;

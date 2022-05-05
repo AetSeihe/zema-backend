@@ -14,6 +14,9 @@ import {
 import { City } from 'src/city/entity/City.entity';
 import { MIN_PASSWORD_LENGHT } from 'src/core/constants';
 import { locale } from 'src/locale';
+import { Comment } from 'src/post/enity/Comment.entity';
+import { Like } from 'src/post/enity/Like.entity';
+import { Post } from 'src/post/enity/Post.enity';
 import { EducationEnum } from 'src/types/EducationEnum';
 import { GenderEnum } from 'src/types/GenderEnum';
 import { UserImage } from './UserImage.entity';
@@ -21,9 +24,9 @@ import { UserImage } from './UserImage.entity';
 const userDatabaseLocale = locale.user.database;
 
 @Table({
-  modelName: 'User',
+  modelName: 'user',
 })
-export class User extends Model<User> {
+export class User extends Model {
   // Required
   id: number;
 
@@ -114,4 +117,13 @@ export class User extends Model<User> {
 
   @HasMany(() => UserImage)
   images: UserImage[];
+
+  @HasMany(() => Post)
+  posts: Post[];
+
+  @HasMany(() => Like)
+  likes: Like[];
+
+  @HasMany(() => Comment)
+  comments: Comment[];
 }

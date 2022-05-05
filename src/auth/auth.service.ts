@@ -28,11 +28,13 @@ export class AuthService {
     return null;
   }
 
-  async login(user: JwtPayloadType) {
+  async login(user: User) {
     const payload: JwtPayloadType = {
-      username: user.username,
-      userId: user.userId,
+      username: user.name,
+      userId: user.id,
     };
+
+
     const token = this.jwtService.sign(payload, {
       secret: this.configService.get('JWT_SECRET'),
     });

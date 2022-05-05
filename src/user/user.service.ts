@@ -55,10 +55,12 @@ export class UserService {
     }, {});
 
     const users = await this.userRepository.findAll({
+      subQuery: false,
       where: {
         age: {
           [Op.between]: [options.minAge, options.maxAge],
         },
+
         ...currentOptions,
       },
       include: [UserImage],
@@ -84,6 +86,7 @@ export class UserService {
       where: {
         [Op.or]: {
           email: login,
+          phone: login,
         },
       },
     });
@@ -140,12 +143,10 @@ export class UserService {
     const imagesUrls = await this.fileService.createFiles(images);
     await Promise.all(
       imagesUrls.map((path) => {
-        const image = this.userImagesRepository.create({
+        return this.userImagesRepository.create({
           fileName: path,
           userId: user.id,
         });
-
-        return image;
       }),
     );
 
