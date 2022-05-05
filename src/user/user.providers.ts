@@ -1,4 +1,4 @@
-import { USER_IMAGES, USER_REPOSITORY } from 'src/core/providers-names';
+import { USER_IMAGES_REPOSITORY, USER_REPOSITORY } from 'src/core/providers-names';
 import { User } from './entity/User.entity';
 import { UserImage } from './entity/UserImage.entity';
 
@@ -8,7 +8,7 @@ export const userProviders = [
     useValue: User,
   },
   {
-    provide: USER_IMAGES,
+    provide: USER_IMAGES_REPOSITORY,
     useValue: UserImage,
   },
 ];

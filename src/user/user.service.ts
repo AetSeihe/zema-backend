@@ -6,7 +6,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { USER_IMAGES, USER_REPOSITORY } from 'src/core/providers-names';
+import {
+  USER_IMAGES_REPOSITORY,
+  USER_REPOSITORY,
+} from 'src/core/providers-names';
 import { Op } from 'sequelize';
 import { UserGetAllOptionsDTO } from './dto/user-getall-options.dto';
 import { User } from './entity/User.entity';
@@ -29,7 +32,7 @@ const userServiceLocale = locale.user.service;
 export class UserService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepository: typeof User,
-    @Inject(USER_IMAGES)
+    @Inject(USER_IMAGES_REPOSITORY)
     private readonly userImagesRepository: typeof UserImage,
     private readonly fileService: FileService,
   ) {}
@@ -124,8 +127,12 @@ export class UserService {
     images: Express.Multer.File[],
   ) {
     const user = await this.userRepository.findByPk(userData.userId);
+
     const candidate = await this.userRepository.findOne({
       where: {
+        id: {
+          [Op.ne]: userData.userId,
+        },
         [Op.or]: {
           email: options.email ?? '',
           phone: options.phone ?? '',
@@ -133,11 +140,11 @@ export class UserService {
       },
     });
 
-    if (
-      candidate &&
-      user.email !== options.email &&
-      user.phone !== options.phone
-    ) {
+    if (!user) {
+      throw new NotFoundException(HttpStatus.NOT_FOUND);
+    }
+
+    if (candidate) {
       throw new BadRequestException(userServiceLocale.userDataExistError);
     }
     const imagesUrls = await this.fileService.createFiles(images);

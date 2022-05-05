@@ -8,6 +8,7 @@ import { CityModule } from './city/city.module';
 import { FileModule } from './file/file.module';
 import { AuthModule } from './auth/auth.module';
 import { PostModule } from './post/post.module';
+import { FriendModule } from './friend/friend.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PostModule } from './post/post.module';
     FileModule,
     AuthModule,
     PostModule,
+    FriendModule,
   ],
   controllers: [AppController],
   providers: [AppService],

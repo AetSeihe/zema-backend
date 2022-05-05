@@ -1,6 +1,8 @@
 import { Sequelize } from 'sequelize-typescript';
 import { City } from 'src/city/entity/City.entity';
 import { DB_REPOSITORY } from 'src/core/providers-names';
+import { Friend } from 'src/friend/entity/friend.entity';
+import { RequstFriend } from 'src/friend/entity/request.entity';
 import { Comment } from 'src/post/enity/Comment.entity';
 import { Like } from 'src/post/enity/Like.entity';
 import { Post } from 'src/post/enity/Post.enity';
@@ -20,7 +22,17 @@ export const databaseProviders = [
         username: process.env.DB_USERNAME,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME,
-        models: [User, City, UserImage, Post, Like, PostFiles, Comment],
+        models: [
+          User,
+          City,
+          UserImage,
+          Post,
+          Like,
+          PostFiles,
+          Comment,
+          Friend,
+          RequstFriend,
+        ],
       });
       await sequelize.sync({ alter: true });
 
