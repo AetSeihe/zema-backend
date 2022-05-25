@@ -58,7 +58,11 @@ export class ChatService {
                 {
                   attributes: ['id', 'message', 'userId'],
                   model: Message,
-                  include: [PinnedMessage],
+                  include: [
+                    {
+                      model: PinnedMessage,
+                    },
+                  ],
                   limit: 5,
                 },
               ],
@@ -75,7 +79,10 @@ export class ChatService {
         companion: {
           ...chat.chat
             .get()
-            .chatUsers.find((user) => user.id !== token.userId)
+            .chatUsers.find((user) => {
+              console.log(user.get().userId);
+              return user.get().id !== token.userId;
+            })
             .user.get(),
           userId: undefined,
         },
@@ -112,6 +119,7 @@ export class ChatService {
     });
 
     if (message.pinnedMessage) {
+      console.log('!!! message', message);
       const pinned = await this.pinnedRepository.create({
         messageId: msg.id,
         pinnedMessagesId: message.pinnedMessage,
@@ -127,7 +135,7 @@ export class ChatService {
 
   private async createChat(token: JwtPayloadType, userTo: number) {
     const chat = await this.chatRepository.create();
-
+    console.log('!!!! register users', token, userTo);
     this.chatUserRepository.create({
       chatId: chat.id,
       userId: token.userId,
