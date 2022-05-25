@@ -26,11 +26,13 @@ export class UserController {
 
   @UseInterceptors(ClassSerializerInterceptor)
   @UseGuards(JwtAuthGuard)
-  @Get('/')
+  @Get('/all')
   getAll(@Query() options: UserGetAllOptionsDTO) {
     return this.userService.findAll(options);
   }
+
   @UseInterceptors(ClassSerializerInterceptor)
+  @UseGuards(JwtAuthGuard)
   @Get('/:id')
   getById(@Param('id') id: number) {
     return this.userService.findById(id);

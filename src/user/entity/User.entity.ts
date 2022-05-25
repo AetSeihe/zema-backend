@@ -11,6 +11,7 @@ import {
   Table,
   Validate,
 } from 'sequelize-typescript';
+import { ChatUser } from 'src/chat/entity/ChatUser.enity';
 import { City } from 'src/city/entity/City.entity';
 import { MIN_PASSWORD_LENGHT } from 'src/core/constants';
 import { Friend } from 'src/friend/entity/friend.entity';
@@ -30,6 +31,7 @@ const userDatabaseLocale = locale.user.database;
   modelName: 'user',
 })
 export class User extends Model {
+  [x: string]: any;
   // Required
   id: number;
 
@@ -138,4 +140,7 @@ export class User extends Model {
 
   @HasMany(() => Resume)
   resumes: Resume[];
+
+  @HasMany(() => ChatUser)
+  chats: ChatUser[];
 }

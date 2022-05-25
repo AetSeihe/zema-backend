@@ -1,4 +1,9 @@
 import { Sequelize } from 'sequelize-typescript';
+import { Chat } from 'src/chat/entity/Chat.entity';
+import { ChatUser } from 'src/chat/entity/ChatUser.enity';
+import { Message } from 'src/chat/entity/Message';
+import { MessageFile } from 'src/chat/entity/MessageFile';
+import { PinnedMessage } from 'src/chat/entity/PinnedMessage.enity';
 import { City } from 'src/city/entity/City.entity';
 import { DB_REPOSITORY } from 'src/core/providers-names';
 import { Friend } from 'src/friend/entity/friend.entity';
@@ -34,6 +39,11 @@ export const databaseProviders = [
           Friend,
           RequstFriend,
           Resume,
+          Chat,
+          Message,
+          MessageFile,
+          ChatUser,
+          PinnedMessage,
         ],
       });
       await sequelize.sync({ alter: true });
