@@ -1,23 +1,22 @@
 import {
-  BelongsTo,
-  Column,
-  ForeignKey,
-  Model,
   Table,
+  Model,
+  BelongsTo,
+  ForeignKey,
+  Column,
 } from 'sequelize-typescript';
-import { Message } from './Message';
+import { Message } from './Message.entity';
 
 @Table({
-  modelName: 'chat-file',
+  modelName: 'message-file',
 })
-export class MessageFile extends Model<MessageFile> {
-  id: number;
-
+export class MessageFiles extends Model<MessageFiles> {
   @BelongsTo(() => Message, {
     as: 'message',
   })
   @ForeignKey(() => Message)
   messageId: number;
+
   @Column
-  fileUrl: string;
+  fileName: string;
 }

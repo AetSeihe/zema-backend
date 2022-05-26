@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
+  Query,
   Request,
   UploadedFiles,
   UseGuards,
@@ -13,7 +15,8 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { RequestJwtPayloadType } from 'src/auth/types/JwtPayload.type';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
-import { GetChatOptions } from './dto/get-chats-options.dto';
+import { GetChatsDTO } from './dto/get-chats.dto';
+import { GetMessagesDTO } from './dto/get-messages.dto';
 import { SendMessageDTO } from './dto/send-message.dto';
 
 @Controller('chat')
@@ -22,30 +25,32 @@ export class ChatController {
     private readonly chatService: ChatService,
     private readonly chatGateway: ChatGateway,
   ) {}
-
-  @UseGuards(JwtAuthGuard)
   @Get('/all')
-  getAllChats(
-    @Request() req: RequestJwtPayloadType,
-    @Body() options: GetChatOptions,
-  ) {
-    return this.chatService.getChats(req.user, options);
+  @UseGuards(JwtAuthGuard)
+  getAll(@Request() req: RequestJwtPayloadType, @Query() options: GetChatsDTO) {
+    return this.chatService.getAllChats(req.user, options);
   }
 
+  @Get('/messages')
+  @UseGuards(JwtAuthGuard)
+  getMessages(
+    @Request() req: RequestJwtPayloadType,
+    @Query() options: GetMessagesDTO,
+  ) {
+    return this.chatService.getMessages(req.user, options);
+  }
+
+  @Post('/send')
   @UseInterceptors(FilesInterceptor('files'))
   @UseGuards(JwtAuthGuard)
-  @Post('/send')
   async sendMessage(
-    @UploadedFiles() files: Express.Multer.File[] = [],
     @Request() req: RequestJwtPayloadType,
-    @Body() options: SendMessageDTO,
+    @UploadedFiles() files: Express.Multer.File[] = [],
+    @Body() msg: SendMessageDTO,
   ) {
-    const [message, companionId] = await this.chatService.sendMessage(
-      req.user,
-      options,
-      files,
-    );
-    this.chatGateway.server.emit(`msgToClient ${companionId}`, message);
+    const message = await this.chatService.sendMessage(req.user, msg, files);
+    this.chatGateway.server.emit(`msgToClient ${msg.userTo}`, message);
+    this.chatGateway.server.emit(`msgToClient ${req.user.userId}`, message);
 
     return message;
   }

@@ -37,8 +37,6 @@ export class VacancyController {
     @Request() req: RequestJwtPayloadType,
     @Body() options: CreateResumeDTO,
   ) {
-    console.log('!!! token ', req);
-    console.log('!!! options ', options);
     return this.vacansyService.createResume(req.user, options);
   }
 

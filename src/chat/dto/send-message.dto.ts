@@ -5,10 +5,11 @@ export class SendMessageDTO {
   userTo: number;
 
   @IsString()
-  @IsOptional()
   message: string;
 
   @IsNumberString()
   @IsOptional()
   pinnedMessage: number;
+
+  files: Express.Multer.File[];
 }

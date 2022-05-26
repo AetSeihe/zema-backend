@@ -1,9 +1,9 @@
 import { Sequelize } from 'sequelize-typescript';
 import { Chat } from 'src/chat/entity/Chat.entity';
-import { ChatUser } from 'src/chat/entity/ChatUser.enity';
-import { Message } from 'src/chat/entity/Message';
-import { MessageFile } from 'src/chat/entity/MessageFile';
-import { PinnedMessage } from 'src/chat/entity/PinnedMessage.enity';
+import { Message } from 'src/chat/entity/Message.entity';
+import { MessageAndPintedMessage } from 'src/chat/entity/MessageAndPintedMessage';
+import { MessageFiles } from 'src/chat/entity/MessageFiles.entity';
+import { PinnedMessages } from 'src/chat/entity/PinnedMessages.entity';
 import { City } from 'src/city/entity/City.entity';
 import { DB_REPOSITORY } from 'src/core/providers-names';
 import { Friend } from 'src/friend/entity/friend.entity';
@@ -41,9 +41,9 @@ export const databaseProviders = [
           Resume,
           Chat,
           Message,
-          MessageFile,
-          ChatUser,
-          PinnedMessage,
+          MessageFiles,
+          PinnedMessages,
+          MessageAndPintedMessage,
         ],
       });
       await sequelize.sync({ alter: true });

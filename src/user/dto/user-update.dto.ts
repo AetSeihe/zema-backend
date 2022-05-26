@@ -19,6 +19,10 @@ export class UserUpdateDTO {
   @IsString()
   phone?: string;
 
+  @IsNumberString()
+  @IsOptional()
+  mainPhotoId: string;
+
   @IsOptional()
   @IsString()
   password?: string;
@@ -63,4 +67,5 @@ export class UserUpdateDTO {
   @IsOptional()
   @IsString()
   patronomic?: string;
+  isUpdateProfile: boolean;
 }

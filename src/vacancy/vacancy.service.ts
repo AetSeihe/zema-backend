@@ -41,9 +41,6 @@ export class VacancyService {
     return resume;
   }
   async createResume(token: JwtPayloadType, options: CreateResumeDTO) {
-    console.log('!!! token ', token);
-    console.log('!!! options ', options);
-
     const resume = await this.resumeRepository.create({
       userId: token.userId,
       title: options.title,

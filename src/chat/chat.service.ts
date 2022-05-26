@@ -1,164 +1,193 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  HttpStatus,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Op } from 'sequelize';
 import { JwtPayloadType } from 'src/auth/types/JwtPayload.type';
 import {
   CHAT_REPOSITORY,
-  CHAT_USER_REPOSITORY,
-  MESSAGE_FILE_REPOSITORY,
-  MESSAGE_PINTED_REPOSITORY,
+  MESSAGE_AND_PINED_REPOSITORY,
+  MESSAGE_FILES_REPOSITORY,
+  MESSAGE_PINED_REPOSITORY,
   MESSAGE_REPOSITORY,
   USER_REPOSITORY,
 } from 'src/core/providers-names';
 import { FileService } from 'src/file/file.service';
 import { User } from 'src/user/entity/User.entity';
-import { GetChatOptions } from './dto/get-chats-options.dto';
+import { GetChatsDTO } from './dto/get-chats.dto';
+import { GetMessagesDTO } from './dto/get-messages.dto';
 import { SendMessageDTO } from './dto/send-message.dto';
 import { Chat } from './entity/Chat.entity';
-import { ChatUser } from './entity/ChatUser.enity';
-import { Message } from './entity/Message';
-import { MessageFile } from './entity/MessageFile';
-import { PinnedMessage } from './entity/PinnedMessage.enity';
+import { Message } from './entity/Message.entity';
+import { MessageAndPintedMessage } from './entity/MessageAndPintedMessage';
+import { MessageFiles } from './entity/MessageFiles.entity';
+import { PinnedMessages } from './entity/PinnedMessages.entity';
 
 @Injectable()
 export class ChatService {
   constructor(
     private readonly fileService: FileService,
-
     @Inject(CHAT_REPOSITORY) private readonly chatRepository: typeof Chat,
-    @Inject(CHAT_USER_REPOSITORY)
-    private readonly chatUserRepository: typeof ChatUser,
-    @Inject(MESSAGE_FILE_REPOSITORY)
-    private readonly messageFileRepository: typeof MessageFile,
+    @Inject(USER_REPOSITORY) private readonly userRepository: typeof User,
+    @Inject(MESSAGE_AND_PINED_REPOSITORY)
+    private readonly pinnedMsgRepository: typeof MessageAndPintedMessage,
+
+    @Inject(MESSAGE_PINED_REPOSITORY)
+    private readonly pinedRepository: typeof PinnedMessages,
+    @Inject(MESSAGE_FILES_REPOSITORY)
+    private readonly filesRepository: typeof User,
     @Inject(MESSAGE_REPOSITORY)
     private readonly messageRepository: typeof Message,
-    @Inject(USER_REPOSITORY)
-    private readonly userRepository: typeof User,
-    @Inject(MESSAGE_PINTED_REPOSITORY)
-    private readonly pinnedRepository: typeof PinnedMessage,
   ) {}
 
-  async getChats(token: JwtPayloadType, options: GetChatOptions) {
-    console.log('!!!! token', token);
-    const user = await this.userRepository.findByPk(token.userId, {
-      attributes: [],
+  async getAllChats(token: JwtPayloadType, options: GetChatsDTO) {
+    const chats = await this.chatRepository.findAll({
+      order: [['createdAt', 'DESC']],
+      where: {
+        [Op.or]: [{ userOneId: token.userId }, { userTwoId: token.userId }],
+      },
+      limit: +options.limit || 15,
+      offset: +options.offset || 0,
       include: [
         {
-          attributes: ['chatId'],
-          model: ChatUser,
-          required: true,
+          model: Message,
+          limit: 3,
           include: [
+            MessageFiles,
             {
-              model: Chat,
+              model: MessageAndPintedMessage,
               include: [
                 {
-                  attributes: ['userId'],
-                  model: ChatUser,
-                  include: [User],
-                },
-                {
-                  attributes: ['id', 'message', 'userId'],
-                  model: Message,
-                  include: [
-                    {
-                      model: PinnedMessage,
-                    },
-                  ],
-                  limit: 5,
+                  model: PinnedMessages,
+                  include: [Message],
                 },
               ],
+            },
+          ],
+          order: [['createdAt', 'DESC']],
+        },
+      ],
+    });
+
+    const currentСhats = await Promise.all(
+      chats.map(async (chat) => {
+        const companionId =
+          chat.userOneId === token.userId ? chat.userTwoId : chat.userOneId;
+        const companion = await this.userRepository.findByPk(companionId);
+
+        return {
+          ...chat.get(),
+          userOneId: undefined,
+          userTwoId: undefined,
+          companion,
+        };
+      }),
+    );
+
+    return currentСhats;
+  }
+
+  async getMessages(token: JwtPayloadType, options: GetMessagesDTO) {
+    const chat = await this.chatRepository.findOne({
+      where: {
+        id: options.chatId,
+        [Op.or]: [{ userOneId: token.userId }, { userTwoId: token.userId }],
+      },
+    });
+
+    if (!chat) {
+      throw new NotFoundException(HttpStatus.NOT_FOUND);
+    }
+
+    const messages = await this.messageRepository.findAll({
+      limit: +options.limit || 30,
+      offset: +options.offset || 0,
+      order: [['createdAt', 'DESC']],
+      where: {
+        chatId: options.chatId,
+      },
+      include: [
+        MessageFiles,
+        {
+          model: MessageAndPintedMessage,
+          include: [
+            {
+              model: PinnedMessages,
+              include: [Message],
+            },
+          ],
+        },
+      ],
+    });
+    return messages;
+  }
+
+  async sendMessage(
+    token: JwtPayloadType,
+    msg: SendMessageDTO,
+    files: Express.Multer.File[],
+  ) {
+    const chat = await this.findOrcreateChat(token.userId, msg.userTo);
+
+    const message = await this.messageRepository.create({
+      userId: token.userId,
+      chatId: chat.id,
+      message: msg.message,
+    });
+
+    await this.uploadFiles(message.id, files);
+
+    if (msg.pinnedMessage) {
+      const p = await this.pinnedMsgRepository.create({
+        rootMessageId: message.id,
+      });
+      await this.pinedRepository.create({
+        messageId: msg.pinnedMessage,
+        messageAndPintedMessageId: p.id,
+      });
+    }
+
+    const currentMessage = await this.messageRepository.findByPk(message.id, {
+      include: [
+        MessageFiles,
+        Chat,
+        User,
+        {
+          model: MessageAndPintedMessage,
+          include: [
+            {
+              model: PinnedMessages,
+              include: [Message],
             },
           ],
         },
       ],
     });
 
-    const chats = user.chats.map((chat) => {
-      return {
-        ...chat.chat.get(),
-        chatUsers: undefined,
-        companion: {
-          ...chat.chat
-            .get()
-            .chatUsers.find((user) => {
-              console.log(user.get().userId);
-              return user.get().id !== token.userId;
-            })
-            .user.get(),
-          userId: undefined,
-        },
-      };
-    });
-    return chats;
-  }
-
-  async sendMessage(
-    token: JwtPayloadType,
-    message: SendMessageDTO,
-    files: Express.Multer.File[],
-  ) {
-    let chat = await this.chatRepository.findOne({
-      include: {
-        model: ChatUser,
-        required: true,
-        where: {
-          userId: message.userTo,
-        },
-      },
-    });
-
-    if (!chat) {
-      chat = await this.createChat(token, message.userTo);
-    }
-
-    this.uploadFiles(chat.id, files);
-
-    const msg = await this.messageRepository.create({
-      chatId: chat.id,
-      userId: token.userId,
-      message: message.message,
-    });
-
-    if (message.pinnedMessage) {
-      console.log('!!! message', message);
-      const pinned = await this.pinnedRepository.create({
-        messageId: msg.id,
-        pinnedMessagesId: message.pinnedMessage,
-      });
-    }
-
-    const currentMessage = await this.messageRepository.findByPk(msg.id, {
-      include: [MessageFile, PinnedMessage],
-    });
-
-    return [currentMessage, message.userTo];
-  }
-
-  private async createChat(token: JwtPayloadType, userTo: number) {
-    const chat = await this.chatRepository.create();
-    console.log('!!!! register users', token, userTo);
-    this.chatUserRepository.create({
-      chatId: chat.id,
-      userId: token.userId,
-    });
-
-    this.chatUserRepository.create({
-      chatId: chat.id,
-      userId: userTo,
-    });
-
-    return chat;
+    return currentMessage;
   }
 
   private async uploadFiles(messageId: number, files: Express.Multer.File[]) {
     const imagesUrls = await this.fileService.createFiles(files);
-
     await Promise.all(
       imagesUrls.map((path) => {
-        return this.messageFileRepository.create({
-          fileUrl: path,
+        return this.filesRepository.create({
+          fileName: path,
           messageId: messageId,
         });
       }),
     );
+  }
+
+  private async findOrcreateChat(userOneId: number, userTwoId: number) {
+    const [chat] = await this.chatRepository.findOrCreate({
+      where: {
+        userOneId: userOneId,
+        userTwoId: userTwoId,
+      },
+    });
+    return chat;
   }
 }

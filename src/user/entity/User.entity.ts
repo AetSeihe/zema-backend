@@ -1,17 +1,20 @@
 import {
   AllowNull,
   BelongsTo,
+  BelongsToMany,
   Column,
   DataType,
   Default,
   ForeignKey,
   HasMany,
+  HasOne,
   Length,
   Model,
   Table,
   Validate,
 } from 'sequelize-typescript';
-import { ChatUser } from 'src/chat/entity/ChatUser.enity';
+import { Chat } from 'src/chat/entity/Chat.entity';
+import { Message } from 'src/chat/entity/Message.entity';
 import { City } from 'src/city/entity/City.entity';
 import { MIN_PASSWORD_LENGHT } from 'src/core/constants';
 import { Friend } from 'src/friend/entity/friend.entity';
@@ -141,6 +144,9 @@ export class User extends Model {
   @HasMany(() => Resume)
   resumes: Resume[];
 
-  @HasMany(() => ChatUser)
-  chats: ChatUser[];
+  @HasMany(() => Chat)
+  chats: Chat[];
+
+  @HasMany(() => Message)
+  messages: Message[];
 }

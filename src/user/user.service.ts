@@ -40,7 +40,10 @@ export class UserService {
   async findAll(options: UserGetAllOptionsDTO): Promise<GetAll> {
     options.minAge = options.minAge ?? 0;
     options.maxAge = options.maxAge ?? 999;
-    const currentOptions = Object.keys(options).reduce((prev, acc) => {
+    const currentOptions: any = Object.keys(options).reduce((prev, acc) => {
+      if (acc == 'limit' || acc == 'offset') {
+        return prev;
+      }
       if (
         options[acc] &&
         acc !== 'minAge' &&
@@ -54,11 +57,14 @@ export class UserService {
           [Op.substring]: options.work,
         };
       }
+
       return prev;
     }, {});
 
     const users = await this.userRepository.findAll({
       subQuery: false,
+      limit: +options.limit || 15,
+      offset: +options.offset || 0,
       where: {
         age: {
           [Op.between]: [options.minAge, options.maxAge],
@@ -148,6 +154,10 @@ export class UserService {
       throw new BadRequestException(userServiceLocale.userDataExistError);
     }
     const imagesUrls = await this.fileService.createFiles(images);
+
+    if (imagesUrls.length) {
+      options.isUpdateProfile = true;
+    }
     await Promise.all(
       imagesUrls.map((path) => {
         return this.userImagesRepository.create({
@@ -165,7 +175,10 @@ export class UserService {
     }, {});
 
     await user.update(currentOptions);
-    return this.findById(user.id);
+    const currentUser = await this.userRepository.findByPk(user.id, {
+      include: [UserImage],
+    });
+    return new FindOneDTO(userServiceLocale.update, currentUser.get());
   }
 
   async deleteImage(userData: JwtPayloadType, fileName: DeletePhotoRequestDTO) {

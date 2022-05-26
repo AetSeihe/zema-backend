@@ -13,6 +13,7 @@ export const ru = {
       findOne: 'Пользователь найден',
       userDataExistError: 'Данный email или номер телефона уже используется',
       deletePhoto: 'Фото успешно удаленно',
+      update: 'Пользователь успешно обновлен!',
     },
     database: {
       emailError: 'Это поле должно быть почтой',

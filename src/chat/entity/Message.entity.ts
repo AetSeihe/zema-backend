@@ -1,30 +1,25 @@
 import {
-  AllowNull,
   BelongsTo,
   Column,
   ForeignKey,
   HasMany,
-  HasOne,
   Model,
-  NotNull,
   Table,
 } from 'sequelize-typescript';
 import { User } from 'src/user/entity/User.entity';
 import { Chat } from './Chat.entity';
-import { MessageFile } from './MessageFile';
-import { PinnedMessage } from './PinnedMessage.enity';
+import { MessageAndPintedMessage } from './MessageAndPintedMessage';
+import { MessageFiles } from './MessageFiles.entity';
+import { PinnedMessages } from './PinnedMessages.entity';
 
 @Table({
   modelName: 'message',
 })
 export class Message extends Model<Message> {
-  id: number;
-
-  @Column
-  message: string;
-
+  @BelongsTo(() => Chat, {
+    as: 'chat',
+  })
   @ForeignKey(() => Chat)
-  @AllowNull(false)
   @Column
   chatId: number;
 
@@ -32,18 +27,15 @@ export class Message extends Model<Message> {
     as: 'user',
   })
   @ForeignKey(() => User)
-  @AllowNull(false)
   @Column
   userId: number;
 
-  @HasMany(() => MessageFile)
-  @ForeignKey(() => MessageFile)
-  files: MessageFile[];
-
-  @HasMany(() => PinnedMessage, {
-    as: 'pinned-messages',
-  })
-  @ForeignKey(() => PinnedMessage)
   @Column
-  pinnedMessagesId: number;
+  message: string;
+
+  @HasMany(() => MessageFiles)
+  files: MessageFiles[];
+
+  @HasMany(() => MessageAndPintedMessage)
+  pinnedMessage: PinnedMessages;
 }

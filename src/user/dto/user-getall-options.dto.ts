@@ -36,4 +36,12 @@ export class UserGetAllOptionsDTO {
   @IsOptional()
   @IsEnum(EducationEnum)
   education?: EducationEnum;
+
+  @IsNumberString()
+  @IsOptional()
+  limit: string;
+
+  @IsNumberString()
+  @IsOptional()
+  offset: string;
 }
