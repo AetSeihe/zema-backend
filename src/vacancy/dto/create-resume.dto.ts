@@ -1,34 +1,32 @@
-import {
-  IsEmail,
-  IsMobilePhone,
-  IsNumber,
-  IsOptional,
-  IsPhoneNumber,
-  IsString,
-} from 'class-validator';
+import { IsEmail, IsMobilePhone, IsNumber, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateResumeDTO {
+  @ApiProperty()
   @IsString()
   title: string;
 
+  @ApiProperty()
   @IsNumber()
   salary: string;
 
+  @ApiProperty()
   @IsNumber()
   workExperience: number;
 
+  @ApiProperty()
   @IsString()
   description: string;
-  @IsString()
-  citizenship: string;
-  @IsString()
-  experience: string;
 
-  @IsOptional()
+  @ApiProperty()
+  @IsNumber()
+  cityId: number;
+
+  @ApiProperty()
   @IsMobilePhone('ru-RU')
   phone?: string;
 
-  @IsOptional()
+  @ApiProperty()
   @IsEmail()
   email?: string;
 }

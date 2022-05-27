@@ -5,7 +5,7 @@ import {
   Inject,
   Injectable,
 } from '@nestjs/common';
-import sequelize from 'sequelize';
+import { Op } from 'sequelize';
 import { JwtPayloadType } from 'src/auth/types/JwtPayload.type';
 import {
   COMMENT_REPOSITORY,
@@ -17,13 +17,21 @@ import { FileService } from 'src/file/file.service';
 import { locale } from 'src/locale';
 import { User } from 'src/user/entity/User.entity';
 import { UserImage } from 'src/user/entity/UserImage.entity';
+import { UserMainImage } from 'src/user/entity/UserMainImage';
 import { AddCommentDTO } from './dto/add-comment.dto';
+import { CommentResponseDTO } from './dto/comment-reponse.dto';
 import { CommentDto } from './dto/comment.dto';
+import {
+  GetPostsDataDTO,
+  GetPostsOptionsDTO,
+} from './dto/get-all-posts-options.dto';
 import { GetAllPostsDTO } from './dto/get-all-posts.dto';
 import { LikeDto } from './dto/like.dto';
+import { OnePostDTO } from './dto/one-post.dto';
 import { PostCreateDTO } from './dto/post-create.dto';
 import { PostDTO } from './dto/post.dto';
 import { SetLikeDTO } from './dto/set-like.dto';
+import { ToogleLikeDTO } from './dto/toogle-like.dto';
 import { Comment } from './enity/Comment.entity';
 import { Like } from './enity/Like.entity';
 import { Post } from './enity/Post.enity';
@@ -45,12 +53,36 @@ export class PostService {
     private readonly fileService: FileService,
   ) {}
 
-  async getAll() {
+  async getAll(data: GetPostsDataDTO, options: GetPostsOptionsDTO) {
     const allPosts = await this.postRepository.findAll({
+      limit: options.limit || 15,
+      offset: options.offset || 0,
+      order: [['createdAt', options.sortBy || 'DESC']],
+      where: {
+        [Op.or]: [
+          {
+            title: {
+              [Op.substring]: data.text || '',
+            },
+          },
+          {
+            text: {
+              [Op.substring]: data.text || '',
+            },
+          },
+        ],
+      },
       include: [
         {
           model: User,
-          include: [UserImage],
+          required: true,
+          include: [
+            {
+              model: UserMainImage,
+              attributes: ['imageId'],
+              include: [UserImage],
+            },
+          ],
         },
         PostFiles,
         Like,
@@ -67,16 +99,27 @@ export class PostService {
   async getById(token: JwtPayloadType, postId: number) {
     const post = await this.postRepository.findByPk(postId, {
       include: [
+        PostFiles,
         {
           model: User,
-          include: [UserImage],
+          include: [
+            {
+              model: UserMainImage,
+              include: [UserImage],
+            },
+          ],
         },
         {
           model: Like,
           include: [
             {
               model: User,
-              include: [UserImage],
+              include: [
+                {
+                  model: UserMainImage,
+                  include: [UserImage],
+                },
+              ],
             },
           ],
         },
@@ -85,7 +128,12 @@ export class PostService {
           include: [
             {
               model: User,
-              include: [UserImage],
+              include: [
+                {
+                  model: UserMainImage,
+                  include: [UserImage],
+                },
+              ],
             },
           ],
         },
@@ -96,7 +144,10 @@ export class PostService {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
 
-    return new PostDTO(post.get());
+    return new OnePostDTO({
+      message: serviceLocale.findById,
+      post: new PostDTO(post.get()),
+    });
   }
 
   async create(
@@ -127,40 +178,73 @@ export class PostService {
 
     post.setDataValue('likes', []);
 
-    return new PostDTO(post.get());
+    return new OnePostDTO({
+      message: serviceLocale.create,
+      post: new PostDTO(post.get()),
+    });
   }
 
   async likeComment(token: JwtPayloadType, options: SetLikeDTO) {
-    const [like, create] = await this.likeRepository.findOrCreate({
-      where: {
-        userId: token.userId,
-        postId: options.postId,
-      },
-    });
+    try {
+      const [like, create] = await this.likeRepository.findOrCreate({
+        where: {
+          userId: token.userId,
+          postId: options.postId,
+        },
+      });
 
-    if (!create) {
-      await like.destroy();
+      if (!create) {
+        await like.destroy();
+      }
+
+      return new ToogleLikeDTO({
+        message: create ? serviceLocale.like : serviceLocale.unlike,
+        like: new LikeDto(like.get()),
+      });
+    } catch (e) {
+      throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
-
-    return new LikeDto(like);
   }
 
   async addComment(token: JwtPayloadType, options: AddCommentDTO) {
-    const comment = await this.commentRepository.create({
-      userId: token.userId,
-      postId: options.postId,
-      text: options.text,
-    });
-
-    return new CommentDto(comment.get());
+    try {
+      const comment = await this.commentRepository.create(
+        {
+          userId: token.userId,
+          postId: options.postId,
+          text: options.text,
+        },
+        {
+          include: [User],
+        },
+      );
+      return new CommentResponseDTO({
+        message: serviceLocale.comment,
+        comment: new CommentDto(comment.get()),
+      });
+    } catch (e) {
+      throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    }
   }
 
   async deleteComment(token: JwtPayloadType, commentId: number) {
-    const comment = await this.commentRepository.findByPk(commentId);
-    if (comment.userId != token.userId) {
-      throw new ForbiddenException();
+    try {
+      const comment = await this.commentRepository.findByPk(commentId, {
+        include: [Post],
+      });
+      if (
+        comment.userId != token.userId ||
+        token.userId !== comment.post.userId
+      ) {
+        throw new ForbiddenException();
+      }
+      await comment.destroy();
+      return new CommentResponseDTO({
+        message: serviceLocale.delete_comment,
+        comment: new CommentDto(comment.get()),
+      });
+    } catch (e) {
+      throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
-    await comment.destroy();
-    return new CommentDto(comment.get());
   }
 }

@@ -15,9 +15,13 @@ import {
   USER_REPOSITORY,
 } from 'src/core/providers-names';
 import { FileService } from 'src/file/file.service';
+import { locale } from 'src/locale';
 import { User } from 'src/user/entity/User.entity';
-import { GetChatsDTO } from './dto/get-chats.dto';
-import { GetMessagesDTO } from './dto/get-messages.dto';
+import { ChatDto } from './dto/chat.dto';
+import { GetAllChatsDTO } from './dto/get-all-chats.dto';
+import { GetAllChatDataDTO, GetAllChatOptionsDTO } from './dto/get-chats.dto';
+import { GetMessagesDTO, MessagesResponseDTO } from './dto/get-messages.dto';
+import { MessageDTO } from './dto/message.dto';
 import { SendMessageDTO } from './dto/send-message.dto';
 import { Chat } from './entity/Chat.entity';
 import { Message } from './entity/Message.entity';
@@ -25,6 +29,7 @@ import { MessageAndPintedMessage } from './entity/MessageAndPintedMessage';
 import { MessageFiles } from './entity/MessageFiles.entity';
 import { PinnedMessages } from './entity/PinnedMessages.entity';
 
+const chatLocale = locale.chat;
 @Injectable()
 export class ChatService {
   constructor(
@@ -42,7 +47,11 @@ export class ChatService {
     private readonly messageRepository: typeof Message,
   ) {}
 
-  async getAllChats(token: JwtPayloadType, options: GetChatsDTO) {
+  async getAllChats(
+    token: JwtPayloadType,
+    data: GetAllChatDataDTO,
+    options: GetAllChatOptionsDTO,
+  ) {
     const chats = await this.chatRepository.findAll({
       order: [['createdAt', 'DESC']],
       where: {
@@ -70,23 +79,67 @@ export class ChatService {
         },
       ],
     });
-
-    const currentСhats = await Promise.all(
+    const currentСhats: ChatDto[] = [];
+    await Promise.all(
       chats.map(async (chat) => {
         const companionId =
           chat.userOneId === token.userId ? chat.userTwoId : chat.userOneId;
-        const companion = await this.userRepository.findByPk(companionId);
 
-        return {
-          ...chat.get(),
-          userOneId: undefined,
-          userTwoId: undefined,
-          companion,
-        };
+        if (data.userName) {
+          const companion = await this.userRepository.findOne({
+            where: {
+              [Op.or]: [
+                {
+                  name: {
+                    [Op.substring]: data.userName,
+                  },
+                },
+                {
+                  surname: {
+                    [Op.substring]: data.userName,
+                  },
+                },
+                {
+                  patronomic: {
+                    [Op.substring]: data.userName,
+                  },
+                },
+              ],
+            },
+          });
+
+          if (
+            companion &&
+            (companion.id == chat.userOneId || companion.id == chat.userTwoId)
+          ) {
+            currentСhats.push(
+              new ChatDto({
+                ...chat.get(),
+                userOneId: undefined,
+                userTwoId: undefined,
+                companion,
+              }),
+            );
+          }
+
+          return;
+        }
+        const companion = await this.userRepository.findByPk(companionId);
+        currentСhats.push(
+          new ChatDto({
+            ...chat.get(),
+            userOneId: undefined,
+            userTwoId: undefined,
+            companion,
+          }),
+        );
       }),
     );
 
-    return currentСhats;
+    return new GetAllChatsDTO({
+      message: chatLocale.getAll,
+      chats: currentСhats,
+    });
   }
 
   async getMessages(token: JwtPayloadType, options: GetMessagesDTO) {
@@ -121,7 +174,12 @@ export class ChatService {
         },
       ],
     });
-    return messages;
+
+    const currentMessages = messages.map((msg) => new MessageDTO(msg.get()));
+    return new MessagesResponseDTO({
+      message: chatLocale.messages,
+      messages: currentMessages,
+    });
   }
 
   async sendMessage(
@@ -166,7 +224,7 @@ export class ChatService {
       ],
     });
 
-    return currentMessage;
+    return new MessageDTO(currentMessage.get());
   }
 
   private async uploadFiles(messageId: number, files: Express.Multer.File[]) {

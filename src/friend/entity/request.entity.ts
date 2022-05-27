@@ -11,6 +11,7 @@ import { User } from 'src/user/entity/User.entity';
   modelName: 'request',
 })
 export class RequstFriend extends Model<RequstFriend> {
+  id: number;
   @ForeignKey(() => User)
   @BelongsTo(() => User, {
     as: 'user',

@@ -8,7 +8,7 @@ import {
 import { User } from 'src/user/entity/User.entity';
 
 @Table({
-  modelName: 'friend',
+  modelName: 'friend-table',
 })
 export class Friend extends Model<Friend> {
   @ForeignKey(() => User)

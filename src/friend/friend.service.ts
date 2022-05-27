@@ -10,60 +10,93 @@ import { JwtPayloadType } from 'src/auth/types/JwtPayload.type';
 import {
   FRIEND_REPOSITORY,
   REQUEST_REPOSITORY,
+  USER_REPOSITORY,
 } from 'src/core/providers-names';
+import { locale } from 'src/locale';
 import { User } from 'src/user/entity/User.entity';
 import { UserImage } from 'src/user/entity/UserImage.entity';
+import { UserMainImage } from 'src/user/entity/UserMainImage';
+import { FriendManagerDTO } from './dto/friend-manager.dto';
+import { FriendDTO, FriendManagerItemDTO } from './dto/friend.dto';
+import { GetAllFriendDTO } from './dto/get-all-friend.dto';
 import { Friend } from './entity/friend.entity';
 import { RequstFriend } from './entity/request.entity';
+
+const friendLocale = locale.friends;
 
 @Injectable()
 export class FriendService {
   constructor(
     @Inject(FRIEND_REPOSITORY) private readonly friendRepository: typeof Friend,
+    @Inject(USER_REPOSITORY) private readonly userRepository: typeof User,
+
     @Inject(REQUEST_REPOSITORY)
     private readonly requestRepository: typeof RequstFriend,
   ) {}
 
-  async getAllFriends(userId: number) {
-    const friends = this.friendRepository.findAll({
+  async getAllFriends(userId: number): Promise<GetAllFriendDTO> {
+    const friends = await this.friendRepository.findAll({
       where: {
         [Op.or]: {
           userId: userId,
           friendId: userId,
         },
       },
-      include: [
-        {
-          model: User,
-          include: [UserImage],
-          as: 'user',
-        },
-        {
-          model: User,
-          include: [UserImage],
-          as: 'friend',
-        },
-      ],
     });
 
-    return friends;
+    const currentFriends = await Promise.all(
+      friends.map(async (friendObj) => {
+        const friendId =
+          friendObj.userId == userId ? friendObj.friendId : friendObj.userId;
+        const friend = await this.userRepository.findByPk(friendId, {
+          include: [
+            {
+              model: UserMainImage,
+              include: [UserImage],
+            },
+          ],
+        });
+
+        return new FriendDTO({
+          ...friendObj.get(),
+          friend: friend,
+        });
+      }),
+    );
+
+    return new GetAllFriendDTO({
+      message: friendLocale.allFriends,
+      friends: currentFriends,
+    });
   }
 
   async getAllRequests(userId: number) {
-    const friends = this.requestRepository.findAll({
+    const requests = await this.requestRepository.findAll({
       where: {
         friendId: userId,
       },
       include: [
         {
           model: User,
-          include: [UserImage],
+          include: [
+            {
+              model: UserMainImage,
+              include: [UserImage],
+            },
+          ],
           as: 'friend',
         },
       ],
     });
 
-    return friends;
+    const currentRequests = requests.map(
+      (request) => new FriendDTO(request.get()),
+    );
+
+    return new GetAllFriendDTO({
+      message: friendLocale.allRequests,
+      friends: currentRequests,
+    });
   }
 
   async sendRequest(token: JwtPayloadType, friendId: number) {
@@ -73,16 +106,8 @@ export class FriendService {
 
     const friend = await this.friendRepository.findOne({
       where: {
-        [Op.or]: {
-          friendId: friendId,
-        },
+        friendId: friendId,
       },
-      include: [
-        {
-          model: User,
-          include: [UserImage],
-        },
-      ],
     });
     if (friend) {
       throw new ForbiddenException();
@@ -99,7 +124,10 @@ export class FriendService {
       throw new ForbiddenException();
     }
 
-    return request;
+    return new FriendManagerDTO({
+      message: friendLocale.send,
+      data: new FriendManagerItemDTO(request.get()),
+    });
   }
 
   async acceptRequest(token: JwtPayloadType, requestId: number) {
@@ -114,10 +142,14 @@ export class FriendService {
 
     const friend = await this.friendRepository.create({
       userId: token.userId,
-      friendId: request.friendId,
+      friendId:
+        request.friendId === token.userId ? request.userId : request.friendId,
     });
 
-    return friend;
+    return new FriendManagerDTO({
+      message: friendLocale.accept,
+      data: new FriendManagerItemDTO(friend.get()),
+    });
   }
 
   async rejectRequest(token: JwtPayloadType, requestId: number) {
@@ -129,7 +161,11 @@ export class FriendService {
       throw new ForbiddenException();
     }
     await request.destroy();
-    return request;
+
+    return new FriendManagerDTO({
+      message: friendLocale.reject,
+      data: new FriendManagerItemDTO(request.get()),
+    });
   }
 
   async deleteFriend(token: JwtPayloadType, friendId: number) {
@@ -138,6 +174,9 @@ export class FriendService {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
     await request.destroy();
-    return request;
+    return new FriendManagerDTO({
+      message: friendLocale.delete,
+      data: new FriendManagerItemDTO(request.get()),
+    });
   }
 }

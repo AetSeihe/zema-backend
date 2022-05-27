@@ -1,4 +1,5 @@
 import { UserImageDTO } from './user-Image.dto';
+import { ApiProperty } from '@nestjs/swagger';
 
 type DeletePhotoDTOType = {
   message: string;
@@ -11,6 +12,9 @@ export class DeletePhotoDTO {
     this.image = image;
   }
 
+  @ApiProperty()
   message: string;
+
+  @ApiProperty()
   image: UserImageDTO;
 }

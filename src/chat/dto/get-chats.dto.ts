@@ -1,6 +1,10 @@
-import { IsNumberString, IsOptional } from 'class-validator';
+import { IsNumberString, IsObject, IsOptional } from 'class-validator';
 
-export class GetChatsDTO {
+export class GetAllChatDataDTO {
+  userName: string;
+}
+
+export class GetAllChatOptionsDTO {
   @IsNumberString()
   @IsOptional()
   limit: number;
@@ -8,4 +12,12 @@ export class GetChatsDTO {
   @IsNumberString()
   @IsOptional()
   offset: number;
+}
+
+export class GetChatsDTO {
+  @IsObject()
+  options: GetAllChatOptionsDTO;
+
+  @IsObject()
+  data: GetAllChatDataDTO;
 }

@@ -25,8 +25,9 @@ import { Like } from 'src/post/enity/Like.entity';
 import { Post } from 'src/post/enity/Post.enity';
 import { EducationEnum } from 'src/types/EducationEnum';
 import { GenderEnum } from 'src/types/GenderEnum';
-import { Resume } from 'src/vacancy/entity/resume.enity';
+import { Vacancy } from 'src/vacancy/entity/vacancy.enity';
 import { UserImage } from './UserImage.entity';
+import { UserMainImage } from './UserMainImage';
 
 const userDatabaseLocale = locale.user.database;
 
@@ -77,15 +78,17 @@ export class User extends Model {
 
   @ForeignKey(() => City)
   @BelongsTo(() => City, {
-    as: 'current_city',
+    as: 'currentCity',
   })
-  currentCity: City;
+  @Column
+  currentCityId: number;
 
   @ForeignKey(() => City)
   @BelongsTo(() => City, {
-    as: 'birth_city',
+    as: 'birthCity',
   })
-  birthCity: City;
+  @Column
+  birthCityId: number;
 
   @Column
   work: string;
@@ -126,6 +129,9 @@ export class User extends Model {
   @HasMany(() => UserImage)
   images: UserImage[];
 
+  @HasOne(() => UserMainImage)
+  mainPhoto: UserMainImage;
+
   @HasMany(() => Post)
   posts: Post[];
 
@@ -141,8 +147,8 @@ export class User extends Model {
   @HasMany(() => RequstFriend)
   requests: RequstFriend[];
 
-  @HasMany(() => Resume)
-  resumes: Resume[];
+  @HasMany(() => Vacancy)
+  resumes: Vacancy[];
 
   @HasMany(() => Chat)
   chats: Chat[];

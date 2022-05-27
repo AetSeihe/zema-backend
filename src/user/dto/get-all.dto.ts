@@ -1,4 +1,5 @@
 import { UserDTO } from './user.dto';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class GetAll {
   constructor(message: string, users: UserDTO[]) {
@@ -6,6 +7,9 @@ export class GetAll {
     this.users = users;
   }
 
+  @ApiProperty()
   message: string;
+
+  @ApiProperty({ type: [UserDTO] })
   users: UserDTO[];
 }

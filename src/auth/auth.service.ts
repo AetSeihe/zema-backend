@@ -8,7 +8,7 @@ import { User } from 'src/user/entity/User.entity';
 import { UserService } from 'src/user/user.service';
 import { JwtPayloadType } from './types/JwtPayload.type';
 import { UserSignUpRequest } from './types/UserSignUpRequest.dto';
-
+import { compare } from 'bcrypt';
 const localeService = locale.auth.service;
 
 @Injectable()
@@ -22,7 +22,8 @@ export class AuthService {
 
   async validateUser(username: string, pass: string): Promise<User> {
     const user = await this.usersService.findOneByLogin(username);
-    if (user && user.password === pass) {
+    const comparePassword = await compare(pass, user.password);
+    if (user && comparePassword) {
       return user;
     }
     return null;

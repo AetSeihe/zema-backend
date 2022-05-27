@@ -8,9 +8,11 @@ import {
 } from '@nestjs/common';
 import {
   USER_IMAGES_REPOSITORY,
+  USER_MAIN_IMAGE_REPOSITORY,
   USER_REPOSITORY,
 } from 'src/core/providers-names';
 import { Op } from 'sequelize';
+import { hash } from 'bcrypt';
 import { UserGetAllOptionsDTO } from './dto/user-getall-options.dto';
 import { User } from './entity/User.entity';
 import { UserDTO } from './dto/user.dto';
@@ -25,6 +27,8 @@ import { UserImage } from './entity/UserImage.entity';
 import { DeletePhotoDTO } from './dto/delete-photo.dto';
 import { UserImageDTO } from './dto/user-Image.dto';
 import { DeletePhotoRequestDTO } from './dto/delete-photo-request.dto';
+import { UserMainImage } from './entity/UserMainImage';
+import { City } from 'src/city/entity/City.entity';
 
 const userServiceLocale = locale.user.service;
 
@@ -32,6 +36,9 @@ const userServiceLocale = locale.user.service;
 export class UserService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepository: typeof User,
+    @Inject(USER_MAIN_IMAGE_REPOSITORY)
+    private readonly userMainImageRepository: typeof UserMainImage,
+
     @Inject(USER_IMAGES_REPOSITORY)
     private readonly userImagesRepository: typeof UserImage,
     private readonly fileService: FileService,
@@ -62,7 +69,6 @@ export class UserService {
     }, {});
 
     const users = await this.userRepository.findAll({
-      subQuery: false,
       limit: +options.limit || 15,
       offset: +options.offset || 0,
       where: {
@@ -72,7 +78,14 @@ export class UserService {
 
         ...currentOptions,
       },
-      include: [UserImage],
+      include: [
+        UserImage,
+        {
+          model: UserMainImage,
+          attributes: ['imageId'],
+          include: [UserImage],
+        },
+      ],
     });
 
     const usersDTO = users.map((user) => new UserDTO(user.get()));
@@ -82,7 +95,14 @@ export class UserService {
 
   async findById(userId: number) {
     const candidate = await this.userRepository.findByPk(userId, {
-      include: [UserImage],
+      include: [
+        UserImage,
+        {
+          model: UserMainImage,
+          attributes: ['imageId'],
+          include: [UserImage],
+        },
+      ],
     });
     if (!candidate) {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
@@ -92,6 +112,14 @@ export class UserService {
 
   async findOneByLogin(login: string) {
     const candidate = await this.userRepository.findOne({
+      include: [
+        UserImage,
+        {
+          model: UserMainImage,
+          attributes: ['imageId'],
+          include: [UserImage],
+        },
+      ],
       where: {
         [Op.or]: {
           email: login,
@@ -105,6 +133,14 @@ export class UserService {
 
   async create(signInDTO: UserSignUp) {
     const candidate = await this.userRepository.findOne({
+      include: [
+        UserImage,
+        {
+          model: UserMainImage,
+          attributes: ['imageId'],
+          include: [UserImage],
+        },
+      ],
       where: {
         [Op.or]: {
           email: signInDTO.email,
@@ -116,12 +152,12 @@ export class UserService {
     if (candidate) {
       throw new BadRequestException(userServiceLocale.userDataExistError);
     }
-
+    const currentPassword = await hash(signInDTO.password, 10);
     const user = await this.userRepository.create({
       name: signInDTO.name,
       email: signInDTO.email,
       phone: signInDTO.phone,
-      password: signInDTO.password,
+      password: currentPassword,
     });
 
     return user.get();
@@ -155,9 +191,7 @@ export class UserService {
     }
     const imagesUrls = await this.fileService.createFiles(images);
 
-    if (imagesUrls.length) {
-      options.isUpdateProfile = true;
-    }
+    options.isUpdateProfile = !!imagesUrls.length;
     await Promise.all(
       imagesUrls.map((path) => {
         return this.userImagesRepository.create({
@@ -168,16 +202,31 @@ export class UserService {
     );
 
     const currentOptions = Object.keys(options).reduce((prev, acc) => {
-      if (options[acc]) {
+      if (options[acc] && acc != 'mainPhotoId') {
         prev[acc] = options[acc];
       }
       return prev;
     }, {});
 
+    if (options.mainPhotoId) {
+      await this.userMainImageRepository.create({
+        userId: user.id,
+        imageId: +options.mainPhotoId,
+      });
+    }
+
     await user.update(currentOptions);
     const currentUser = await this.userRepository.findByPk(user.id, {
-      include: [UserImage],
+      include: [
+        UserImage,
+        {
+          model: UserMainImage,
+          attributes: ['imageId'],
+          include: [UserImage],
+        },
+      ],
     });
+
     return new FindOneDTO(userServiceLocale.update, currentUser.get());
   }
 

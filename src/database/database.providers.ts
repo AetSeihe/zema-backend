@@ -15,7 +15,8 @@ import { PostFiles } from 'src/post/enity/PostFiles.entity';
 
 import { User } from 'src/user/entity/User.entity';
 import { UserImage } from 'src/user/entity/UserImage.entity';
-import { Resume } from 'src/vacancy/entity/resume.enity';
+import { UserMainImage } from 'src/user/entity/UserMainImage';
+import { Vacancy } from 'src/vacancy/entity/vacancy.enity';
 
 export const databaseProviders = [
   {
@@ -38,12 +39,13 @@ export const databaseProviders = [
           Comment,
           Friend,
           RequstFriend,
-          Resume,
+          Vacancy,
           Chat,
           Message,
           MessageFiles,
           PinnedMessages,
           MessageAndPintedMessage,
+          UserMainImage,
         ],
       });
       await sequelize.sync({ alter: true });

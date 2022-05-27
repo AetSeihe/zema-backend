@@ -13,18 +13,30 @@ import { UserSignUp } from 'src/user/dto/user-signup.dto';
 import { UserDTO } from 'src/user/dto/user.dto';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
-import { JwtPayloadType, RequestJwtPayloadType } from './types/JwtPayload.type';
+import { ApiTags, ApiHeader, ApiBody, ApiResponse } from '@nestjs/swagger';
+import { SignInDTO } from './dto/sign-in.dto';
+import { AuthResponseDTO } from './dto/auth-response.dto';
 
 const localeService = locale.auth.service;
 
+@ApiTags('Auth')
+@ApiHeader({
+  name: 'Authorization',
+  description: 'Bearer [token]',
+})
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @UseInterceptors(ClassSerializerInterceptor)
+  @ApiBody({
+    type: SignInDTO,
+  })
+  @ApiResponse({
+    type: AuthResponseDTO,
+  })
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Request() req) {
+  async login(@Request() req): Promise<AuthResponseDTO> {
     const token = await this.authService.login(req.user);
     return {
       message: localeService.signin,
@@ -33,9 +45,14 @@ export class AuthController {
     };
   }
 
-  @UseInterceptors(ClassSerializerInterceptor)
+  @ApiBody({
+    type: UserSignUp,
+  })
+  @ApiResponse({
+    type: AuthResponseDTO,
+  })
   @Post('/signup')
-  async signUp(@Body() data: UserSignUp) {
+  async signUp(@Body() data: UserSignUp): Promise<AuthResponseDTO> {
     return this.authService.signUp(data);
   }
 }
