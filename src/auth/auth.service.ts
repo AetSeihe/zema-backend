@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { locale } from 'src/locale';
@@ -22,8 +22,12 @@ export class AuthService {
 
   async validateUser(username: string, pass: string): Promise<User> {
     const user = await this.usersService.findOneByLogin(username);
+
+    if (!user) {
+      throw new NotFoundException(HttpStatus.NOT_FOUND);
+    }
     const comparePassword = await compare(pass, user.password);
-    if (user && comparePassword) {
+    if (comparePassword) {
       return user;
     }
     return null;

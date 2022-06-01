@@ -50,7 +50,7 @@ export class PostController {
     type: GetAllPostsDTO,
   })
   @UseGuards(JwtAuthGuard)
-  @Get('/all')
+  @Post('/all')
   getAll(
     @Body('data') data: GetPostsDataDTO,
     @Body('options') options: GetPostsOptionsDTO,
