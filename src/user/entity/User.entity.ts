@@ -90,20 +90,20 @@ export class User extends Model {
   @Column
   birthCityId: number;
 
-  @Column
+  @Column(DataType.TEXT('long'))
   work: string;
 
-  @Column
+  @Column(DataType.TEXT('long'))
   how_can_help: string;
 
-  @Column
+  @Column(DataType.TEXT('long'))
   need_help: string;
 
   @Default('null')
   @Column(DataType.ENUM('null', 'male', 'female'))
   gender: GenderEnum;
 
-  @Column
+  @Column(DataType.TEXT('long'))
   interesting: string;
 
   @Default(18)

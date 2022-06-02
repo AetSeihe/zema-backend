@@ -1,6 +1,7 @@
 import {
   BelongsTo,
   Column,
+  DataType,
   ForeignKey,
   HasMany,
   Model,
@@ -23,7 +24,7 @@ export class Post extends Model<Post> {
   userId: number;
   user: User;
 
-  @Column
+  @Column(DataType.TEXT('long'))
   title: string;
 
   @Column

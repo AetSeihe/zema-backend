@@ -1,6 +1,7 @@
 import {
   BelongsTo,
   Column,
+  DataType,
   ForeignKey,
   Model,
   Table,
@@ -20,7 +21,7 @@ export class Vacancy extends Model<Vacancy> {
   @Column
   workExperience: number;
 
-  @Column
+  @Column(DataType.TEXT('long'))
   description: string;
 
   @BelongsTo(() => City, {
