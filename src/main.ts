@@ -2,9 +2,11 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { FastifyAdapter } from '@nestjs/platform-fastify';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  new FastifyAdapter({ bodyLimit: 10048576 });
   app.useGlobalPipes(new ValidationPipe());
   app.enableCors();
   if (process.env.__DEV__) {

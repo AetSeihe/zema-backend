@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  CITY_REPOSITORY,
   USER_IMAGES_REPOSITORY,
   USER_MAIN_IMAGE_REPOSITORY,
   USER_REPOSITORY,
@@ -36,6 +37,7 @@ const userServiceLocale = locale.user.service;
 export class UserService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepository: typeof User,
+    @Inject(CITY_REPOSITORY) private readonly cityRepository: typeof City,
     @Inject(USER_MAIN_IMAGE_REPOSITORY)
     private readonly userMainImageRepository: typeof UserMainImage,
 
@@ -107,7 +109,17 @@ export class UserService {
     if (!candidate) {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
-    return new FindOneDTO(userServiceLocale.findOne, candidate.get());
+
+    const birthCity = await this.cityRepository.findByPk(candidate.birthCityId);
+    const currentCity = await this.cityRepository.findByPk(
+      candidate.currentCityId,
+    );
+
+    return new FindOneDTO(userServiceLocale.findOne, {
+      ...candidate.get(),
+      birthCity,
+      currentCity,
+    });
   }
 
   async findOneByLogin(login: string) {
@@ -216,6 +228,7 @@ export class UserService {
     }
 
     await user.update(currentOptions);
+
     const currentUser = await this.userRepository.findByPk(user.id, {
       include: [
         UserImage,
@@ -227,7 +240,18 @@ export class UserService {
       ],
     });
 
-    return new FindOneDTO(userServiceLocale.update, currentUser.get());
+    const birthCity = await this.cityRepository.findByPk(
+      currentUser.birthCityId,
+    );
+    const currentCity = await this.cityRepository.findByPk(
+      currentUser.currentCityId,
+    );
+
+    return new FindOneDTO(userServiceLocale.update, {
+      ...currentUser.get(),
+      birthCity,
+      currentCity,
+    });
   }
 
   async deleteImage(userData: JwtPayloadType, fileName: DeletePhotoRequestDTO) {

@@ -6,5 +6,6 @@ import { cityProviders } from './city.providers';
 @Module({
   providers: [CityService, ...cityProviders],
   controllers: [CityController],
+  exports: [...cityProviders],
 })
 export class CityModule {}

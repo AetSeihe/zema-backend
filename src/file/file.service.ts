@@ -12,6 +12,7 @@ export class FileService {
 
   async create(file: Express.Multer.File) {
     try {
+      console.log('!!!!1 file', file);
       const fileExtension = file.originalname.split('.').pop();
       const fileName = uuid.v4() + '.' + fileExtension;
       const filePath = resolve(__dirname, '..', 'uploads');

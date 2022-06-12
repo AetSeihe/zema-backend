@@ -27,6 +27,13 @@ export class GetPostsDataDTO {
   @IsNumber()
   @IsOptional()
   cityToId: string;
+
+  @ApiProperty({
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  userId: string;
 }
 
 export class GetPostsOptionsDTO {

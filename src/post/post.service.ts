@@ -54,6 +54,33 @@ export class PostService {
   ) {}
 
   async getAll(data: GetPostsDataDTO, options: GetPostsOptionsDTO) {
+    const whereOptions = [];
+
+    if (data.cityToId) {
+      whereOptions.push({
+        currentCityId: data.cityToId,
+      });
+    }
+    if (data.cityFromId) {
+      whereOptions.push({
+        birthCityId: data.cityFromId,
+      });
+    }
+
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    const whereSuq: any = {
+      where: {},
+    };
+
+    if (whereOptions.length) {
+      whereSuq.where[Op.and] = whereOptions;
+    }
+
+    if (data.userId) {
+      whereSuq.where.id = 1;
+    }
+
+    console.log('!!!whereOptions', whereSuq);
     const allPosts = await this.postRepository.findAll({
       limit: options.limit || 15,
       offset: options.offset || 0,
@@ -76,6 +103,7 @@ export class PostService {
         {
           model: User,
           required: true,
+          ...whereSuq,
           include: [
             {
               model: UserMainImage,
