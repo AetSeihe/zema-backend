@@ -1,8 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { UserDTO } from 'src/user/dto/user.dto';
 
 export class VacancyDTO {
   constructor(partial: Partial<any>) {
     Object.assign(this, partial);
+
+    if (partial.user) {
+      this.user = new UserDTO(partial.user.get());
+    }
   }
 
   @ApiProperty()
@@ -37,4 +42,7 @@ export class VacancyDTO {
 
   @ApiProperty()
   userId: string;
+
+  @ApiProperty()
+  user: UserDTO;
 }

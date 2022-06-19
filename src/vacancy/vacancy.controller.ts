@@ -37,7 +37,7 @@ export class VacancyController {
     type: GetAllVacancyResponseDTO,
   })
   @UseGuards(JwtAuthGuard)
-  @Get('/all')
+  @Post('/all')
   getAll(
     @Body('data') data: GetAllVacancyDataDTO,
     @Body('options') options: GetAllVacancyOptionsDTO,

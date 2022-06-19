@@ -22,14 +22,14 @@ export class UserGetAllOptionsDTO {
   })
   @IsOptional()
   @IsNumberString()
-  currentCity?: number;
+  currentCityId?: number;
 
   @ApiProperty({
     required: false,
   })
   @IsOptional()
   @IsNumberString()
-  birthCity?: number;
+  birthCityId?: number;
 
   @ApiProperty({
     required: false,
@@ -50,7 +50,6 @@ export class UserGetAllOptionsDTO {
     required: false,
   })
   @IsOptional()
-  @IsEnum(GenderEnum)
   gender?: GenderEnum;
 
   @ApiProperty({
@@ -68,7 +67,6 @@ export class UserGetAllOptionsDTO {
     required: false,
   })
   @IsOptional()
-  @IsEnum(EducationEnum)
   education?: EducationEnum;
 
   @ApiProperty({

@@ -77,7 +77,7 @@ export class PostService {
     }
 
     if (data.userId) {
-      whereSuq.where.id = 1;
+      whereSuq.where.id = data.userId;
     }
 
     console.log('!!!whereOptions', whereSuq);

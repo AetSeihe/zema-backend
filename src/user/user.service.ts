@@ -47,8 +47,11 @@ export class UserService {
   ) {}
 
   async findAll(options: UserGetAllOptionsDTO): Promise<GetAll> {
-    options.minAge = options.minAge ?? 0;
-    options.maxAge = options.maxAge ?? 999;
+    options.minAge = +options.minAge || 0;
+    options.maxAge = +options.maxAge || 999;
+
+    console.log('!!!options', JSON.stringify(options, null, 2));
+
     const currentOptions: any = Object.keys(options).reduce((prev, acc) => {
       if (acc == 'limit' || acc == 'offset') {
         return prev;
@@ -221,9 +224,8 @@ export class UserService {
     }, {});
 
     if (options.mainPhotoId) {
-      await this.userMainImageRepository.create({
-        userId: user.id,
-        imageId: +options.mainPhotoId,
+      await this.userMainImageRepository.findOrCreate({
+        where: { userId: user.id, imageId: +options.mainPhotoId },
       });
     }
 

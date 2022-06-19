@@ -43,7 +43,18 @@ export class VacancyService {
       limit: options.limit || 15,
       offset: options.offset || 0,
       order: [['createdAt', options.sortBy || 'DESC']],
-      include: [City],
+      include: [
+        City,
+        {
+          model: User,
+          include: [
+            {
+              model: UserMainImage,
+              include: [UserImage],
+            },
+          ],
+        },
+      ],
       where: {
         [Op.or]: [
           {
@@ -81,7 +92,20 @@ export class VacancyService {
   }
 
   async getResumeById(resumeId: number) {
-    const vacancy = await this.resumeRepository.findByPk(resumeId);
+    const vacancy = await this.resumeRepository.findByPk(resumeId, {
+      include: [
+        City,
+        {
+          model: User,
+          include: [
+            {
+              model: UserMainImage,
+              include: [UserImage],
+            },
+          ],
+        },
+      ],
+    });
 
     if (!vacancy) {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
