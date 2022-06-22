@@ -32,13 +32,15 @@ export class VacancyService {
   ) {}
 
   async getAll(data: GetAllVacancyDataDTO, options: GetAllVacancyOptionsDTO) {
-    const currentData: any = Object.keys(data).reduce((prev, acc) => {
-      if (data[acc]) {
-        prev[acc] = data[acc];
-      }
+    const {
+      text,
+      salaryMin,
+      salaryMax,
+      minWorkExpirency,
+      maxWorkExpirency,
+      ...currentData
+    } = data;
 
-      return prev;
-    }, {});
     const resumes = await this.resumeRepository.findAll({
       limit: options.limit || 15,
       offset: options.offset || 0,
@@ -56,28 +58,25 @@ export class VacancyService {
         },
       ],
       where: {
+        ...currentData,
         [Op.or]: [
           {
             title: {
-              [Op.substring]: data.text || '',
+              [Op.substring]: text || '',
             },
           },
           {
             description: {
-              [Op.substring]: data.text || '',
+              [Op.substring]: text || '',
             },
           },
         ],
         salary: {
-          [Op.between]: [data.salaryMin || 0, data.salaryMax || 1000000],
+          [Op.between]: [salaryMin || 0, salaryMax || 1000000],
         },
         workExperience: {
-          [Op.between]: [
-            data.minWorkExpirency || 0,
-            data.maxWorkExpirency || 1000000,
-          ],
+          [Op.between]: [minWorkExpirency || 0, maxWorkExpirency || 1000000],
         },
-        ...currentData,
       },
     });
 

@@ -224,8 +224,11 @@ export class UserService {
     }, {});
 
     if (options.mainPhotoId) {
-      await this.userMainImageRepository.findOrCreate({
-        where: { userId: user.id, imageId: +options.mainPhotoId },
+      const [mainPhoto] = await this.userMainImageRepository.findOrCreate({
+        where: { userId: user.id },
+      });
+      mainPhoto.update({
+        imageId: +options.mainPhotoId,
       });
     }
 
