@@ -9,6 +9,7 @@ import { PostModule } from './post/post.module';
 import { FriendModule } from './friend/friend.module';
 import { VacancyModule } from './vacancy/vacancy.module';
 import { ChatModule } from './chat/chat.module';
+import { ResumeModule } from './resume/resume.module';
 
 @Module({
   imports: [
@@ -23,8 +24,9 @@ import { ChatModule } from './chat/chat.module';
     AuthModule,
     PostModule,
     FriendModule,
-    VacancyModule,
     ChatModule,
+    VacancyModule,
+    ResumeModule,
   ],
 })
 export class AppModule {}

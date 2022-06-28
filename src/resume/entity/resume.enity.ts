@@ -10,9 +10,9 @@ import { City } from 'src/city/entity/City.entity';
 import { User } from 'src/user/entity/User.entity';
 
 @Table({
-  modelName: 'vacancy',
+  modelName: 'resume',
 })
-export class Vacancy extends Model<Vacancy> {
+export class Resume extends Model<Resume> {
   @Column
   title: string;
   @Column

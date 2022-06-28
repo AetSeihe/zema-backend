@@ -8,30 +8,27 @@ import {
 import { Op } from 'sequelize';
 import { JwtPayloadType } from 'src/auth/types/JwtPayload.type';
 import { City } from 'src/city/entity/City.entity';
-import { VACANCY_REPOSITORY } from 'src/core/providers-names';
+import { RESUME_REPOSITORY } from 'src/core/providers-names';
 import { locale } from 'src/locale';
 import { User } from 'src/user/entity/User.entity';
 import { UserImage } from 'src/user/entity/UserImage.entity';
 import { UserMainImage } from 'src/user/entity/UserMainImage';
 import { CreateResumeDTO } from './dto/create-resume.dto';
-import { GetAllVacancyResponseDTO } from './dto/get-all-vacancy-dto';
-import {
-  GetAllVacancyDataDTO,
-  GetAllVacancyOptionsDTO,
-} from './dto/get-all.dto';
-import { GetVacancyResponseDTO } from './dto/get-one-resume';
-import { VacancyDTO } from './dto/vacancy.dto';
-import { Vacancy } from './entity/vacancy.enity';
+import { GetAllResumeResponseDTO } from './dto/get-all-vacancy-dto';
+import { GetAllResumeDataDTO, GetAllResumeOptionsDTO } from './dto/get-all.dto';
+import { GetResumeResponseDTO } from './dto/get-one-resume';
+import { ResumeDTO } from './dto/resume.dto';
+import { Resume } from './entity/resume.enity';
 
 const vacancyLocale = locale.vacancy;
 @Injectable()
-export class VacancyService {
+export class ResumeService {
   constructor(
-    @Inject(VACANCY_REPOSITORY)
-    private readonly resumeRepository: typeof Vacancy,
+    @Inject(RESUME_REPOSITORY)
+    private readonly resumeRepository: typeof Resume,
   ) {}
 
-  async getAll(data: GetAllVacancyDataDTO, options: GetAllVacancyOptionsDTO) {
+  async getAll(data: GetAllResumeDataDTO, options: GetAllResumeOptionsDTO) {
     const {
       text,
       salaryMin,
@@ -81,10 +78,10 @@ export class VacancyService {
     });
 
     const currentVacancies = resumes.map(
-      (resume) => new VacancyDTO(resume.get()),
+      (resume) => new ResumeDTO(resume.get()),
     );
 
-    return new GetAllVacancyResponseDTO({
+    return new GetAllResumeResponseDTO({
       message: vacancyLocale.findAll,
       vacancies: currentVacancies,
     });
@@ -110,9 +107,9 @@ export class VacancyService {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
 
-    return new GetVacancyResponseDTO({
+    return new GetResumeResponseDTO({
       message: vacancyLocale.byId,
-      vacancy: new VacancyDTO(vacancy.get()),
+      vacancy: new ResumeDTO(vacancy.get()),
     });
   }
   async createResume(token: JwtPayloadType, options: CreateResumeDTO) {
@@ -127,9 +124,9 @@ export class VacancyService {
       salary: +options.salary,
     });
 
-    return new GetVacancyResponseDTO({
+    return new GetResumeResponseDTO({
       message: vacancyLocale.create,
-      vacancy: new VacancyDTO(vacancy.get()),
+      vacancy: new ResumeDTO(vacancy.get()),
     });
   }
 
@@ -144,9 +141,9 @@ export class VacancyService {
 
     await vacancy.destroy();
 
-    return new GetVacancyResponseDTO({
+    return new GetResumeResponseDTO({
       message: vacancyLocale.delete,
-      vacancy: new VacancyDTO(vacancy.get()),
+      vacancy: new ResumeDTO(vacancy.get()),
     });
   }
 }

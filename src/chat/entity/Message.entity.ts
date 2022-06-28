@@ -1,6 +1,7 @@
 import {
   BelongsTo,
   Column,
+  Default,
   ForeignKey,
   HasMany,
   Model,
@@ -35,6 +36,10 @@ export class Message extends Model<Message> {
 
   @HasMany(() => MessageFiles)
   files: MessageFiles[];
+
+  @Default(false)
+  @Column
+  readed: boolean;
 
   @HasMany(() => MessageAndPintedMessage)
   pinnedMessage: PinnedMessages;

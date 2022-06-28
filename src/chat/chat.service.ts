@@ -79,6 +79,7 @@ export class ChatService {
         },
       ],
     });
+
     const currentСhats: ChatDto[] = [];
     await Promise.all(
       chats.map(async (chat) => {
