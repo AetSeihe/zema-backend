@@ -17,6 +17,8 @@ import {
 import { FileService } from 'src/file/file.service';
 import { locale } from 'src/locale';
 import { User } from 'src/user/entity/User.entity';
+import { UserImage } from 'src/user/entity/UserImage.entity';
+import { UserMainImage } from 'src/user/entity/UserMainImage';
 import { ChatDto } from './dto/chat.dto';
 import { GetAllChatsDTO } from './dto/get-all-chats.dto';
 import { GetAllChatDataDTO, GetAllChatOptionsDTO } from './dto/get-chats.dto';
@@ -63,18 +65,6 @@ export class ChatService {
         {
           model: Message,
           limit: 3,
-          include: [
-            MessageFiles,
-            {
-              model: MessageAndPintedMessage,
-              include: [
-                {
-                  model: PinnedMessages,
-                  include: [Message],
-                },
-              ],
-            },
-          ],
           order: [['createdAt', 'DESC']],
         },
       ],
@@ -169,7 +159,22 @@ export class ChatService {
           include: [
             {
               model: PinnedMessages,
-              include: [Message],
+              include: [
+                {
+                  model: Message,
+                  include: [
+                    {
+                      model: User,
+                      include: [
+                        {
+                          model: UserMainImage,
+                          include: [UserImage],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
             },
           ],
         },
