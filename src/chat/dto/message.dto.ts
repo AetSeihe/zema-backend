@@ -7,6 +7,7 @@ export class MessageDTO {
     Object.assign(this, partial);
 
     this.user = partial.user && new UserDTO(partial.user.get());
+    this.companion = partial.user && new UserDTO(partial.companion.get());
   }
 
   id: number;
@@ -15,6 +16,7 @@ export class MessageDTO {
   message: string;
 
   user: UserDTO;
+  companion: UserDTO;
 
   createdAt: Date;
   updatedAt: Date;

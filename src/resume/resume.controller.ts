@@ -28,7 +28,7 @@ import { GetResumeResponseDTO } from './dto/get-one-resume';
 })
 @Controller('resume')
 export class ResumeController {
-  constructor(private readonly vacansyService: ResumeService) {}
+  constructor(private readonly resumeService: ResumeService) {}
 
   @ApiBody({
     type: GetAllResumeDTO,
@@ -42,7 +42,7 @@ export class ResumeController {
     @Body('data') data: GetAllResumeDataDTO,
     @Body('options') options: GetAllResumeOptionsDTO,
   ): Promise<GetAllResumeResponseDTO> {
-    return this.vacansyService.getAll(data, options);
+    return this.resumeService.getAll(data, options);
   }
 
   @ApiResponse({
@@ -51,7 +51,7 @@ export class ResumeController {
   @UseGuards(JwtAuthGuard)
   @Get('/:id')
   getById(@Param('id') id: number): Promise<GetResumeResponseDTO> {
-    return this.vacansyService.getResumeById(+id);
+    return this.resumeService.getResumeById(+id);
   }
 
   @ApiResponse({
@@ -63,7 +63,7 @@ export class ResumeController {
     @Request() req: RequestJwtPayloadType,
     @Body() options: CreateResumeDTO,
   ): Promise<GetResumeResponseDTO> {
-    return this.vacansyService.createResume(req.user, options);
+    return this.resumeService.createResume(req.user, options);
   }
 
   @ApiResponse({
@@ -75,6 +75,6 @@ export class ResumeController {
     @Request() req: RequestJwtPayloadType,
     @Param('id') id: number,
   ): Promise<GetResumeResponseDTO> {
-    return this.vacansyService.deleteResumeById(req.user, id);
+    return this.resumeService.deleteResumeById(req.user, id);
   }
 }

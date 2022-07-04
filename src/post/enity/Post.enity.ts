@@ -27,7 +27,7 @@ export class Post extends Model<Post> {
   @Column(DataType.TEXT('long'))
   title: string;
 
-  @Column
+  @Column(DataType.TEXT('long'))
   text: string;
 
   @HasMany(() => Like)

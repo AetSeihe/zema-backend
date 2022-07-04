@@ -21,13 +21,8 @@ import {
 } from './dto/get-chats.dto';
 import { GetMessagesDTO } from './dto/get-messages.dto';
 import { SendMessageDTO } from './dto/send-message.dto';
-import {
-  ApiTags,
-  ApiHeader,
-  ApiBody,
-  ApiResponse,
-  ApiConsumes,
-} from '@nestjs/swagger';
+import { ApiTags, ApiHeader } from '@nestjs/swagger';
+import { ReadMessageDTO } from './dto/read-message.dto';
 
 @ApiTags('Chat')
 @ApiHeader({
@@ -57,6 +52,15 @@ export class ChatController {
     @Query() options: GetMessagesDTO,
   ) {
     return this.chatService.getMessages(req.user, options);
+  }
+
+  @Post('/read')
+  @UseGuards(JwtAuthGuard)
+  readMessages(
+    @Request() req: RequestJwtPayloadType,
+    @Body() messages: ReadMessageDTO,
+  ) {
+    return this.chatService.readMessages(req.user, messages);
   }
 
   @Post('/send')

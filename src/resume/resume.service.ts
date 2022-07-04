@@ -69,10 +69,10 @@ export class ResumeService {
           },
         ],
         salary: {
-          [Op.between]: [salaryMin || 0, salaryMax || 1000000],
+          [Op.between]: [salaryMin || 0, salaryMax || 9999999999999],
         },
         workExperience: {
-          [Op.between]: [minWorkExpirency || 0, maxWorkExpirency || 1000000],
+          [Op.between]: [minWorkExpirency || 0, maxWorkExpirency || 99],
         },
       },
     });

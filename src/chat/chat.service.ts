@@ -24,6 +24,7 @@ import { GetAllChatsDTO } from './dto/get-all-chats.dto';
 import { GetAllChatDataDTO, GetAllChatOptionsDTO } from './dto/get-chats.dto';
 import { GetMessagesDTO, MessagesResponseDTO } from './dto/get-messages.dto';
 import { MessageDTO } from './dto/message.dto';
+import { ReadMessageDTO } from './dto/read-message.dto';
 import { SendMessageDTO } from './dto/send-message.dto';
 import { Chat } from './entity/Chat.entity';
 import { Message } from './entity/Message.entity';
@@ -42,7 +43,7 @@ export class ChatService {
     private readonly pinnedMsgRepository: typeof MessageAndPintedMessage,
 
     @Inject(MESSAGE_PINED_REPOSITORY)
-    private readonly pinedRepository: typeof PinnedMessages,
+    private readonly pinnedRepository: typeof PinnedMessages,
     @Inject(MESSAGE_FILES_REPOSITORY)
     private readonly filesRepository: typeof User,
     @Inject(MESSAGE_REPOSITORY)
@@ -55,7 +56,7 @@ export class ChatService {
     options: GetAllChatOptionsDTO,
   ) {
     const chats = await this.chatRepository.findAll({
-      order: [['createdAt', 'DESC']],
+      order: [['updatedAt', 'DESC']],
       where: {
         [Op.or]: [{ userOneId: token.userId }, { userTwoId: token.userId }],
       },
@@ -64,8 +65,9 @@ export class ChatService {
       include: [
         {
           model: Message,
-          limit: 3,
           order: [['createdAt', 'DESC']],
+          as: 'messages',
+          limit: 3,
         },
       ],
     });
@@ -97,6 +99,12 @@ export class ChatService {
                 },
               ],
             },
+            include: [
+              {
+                model: UserMainImage,
+                include: [UserImage],
+              },
+            ],
           });
 
           if (
@@ -106,8 +114,6 @@ export class ChatService {
             currentСhats.push(
               new ChatDto({
                 ...chat.get(),
-                userOneId: undefined,
-                userTwoId: undefined,
                 companion,
               }),
             );
@@ -115,12 +121,17 @@ export class ChatService {
 
           return;
         }
-        const companion = await this.userRepository.findByPk(companionId);
+        const companion = await this.userRepository.findByPk(companionId, {
+          include: [
+            {
+              model: UserMainImage,
+              include: [UserImage],
+            },
+          ],
+        });
         currentСhats.push(
           new ChatDto({
             ...chat.get(),
-            userOneId: undefined,
-            userTwoId: undefined,
             companion,
           }),
         );
@@ -193,8 +204,9 @@ export class ChatService {
     msg: SendMessageDTO,
     files: Express.Multer.File[],
   ) {
-    const chat = await this.findOrcreateChat(token.userId, msg.userTo);
-
+    const chat = await this.findOrCreateChat(token.userId, msg.userTo);
+    chat.changed('updatedAt', true);
+    await chat.save();
     const message = await this.messageRepository.create({
       userId: token.userId,
       chatId: chat.id,
@@ -207,7 +219,7 @@ export class ChatService {
       const p = await this.pinnedMsgRepository.create({
         rootMessageId: message.id,
       });
-      await this.pinedRepository.create({
+      await this.pinnedRepository.create({
         messageId: msg.pinnedMessage,
         messageAndPintedMessageId: p.id,
       });
@@ -230,9 +242,46 @@ export class ChatService {
       ],
     });
 
-    return new MessageDTO(currentMessage.get());
+    const companionId =
+      chat.userOneId === token.userId ? chat.userTwoId : chat.userOneId;
+
+    const companion = await this.userRepository.findByPk(companionId, {
+      include: [
+        {
+          model: UserMainImage,
+          include: [UserImage],
+        },
+      ],
+    });
+
+    return new MessageDTO({
+      ...currentMessage.get(),
+      companion,
+    });
   }
 
+  async readMessages(token: JwtPayloadType, msg: ReadMessageDTO) {
+    try {
+      Promise.all(
+        msg.messagesId.map(async (msgId) => {
+          const message = await this.messageRepository.findByPk(msgId, {
+            include: [Chat],
+          });
+          if (
+            message.chat.userOneId === token.userId ||
+            message.chat.userTwoId === token.userId
+          ) {
+            message.update({
+              readed: true,
+            });
+          }
+        }),
+      );
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
   private async uploadFiles(messageId: number, files: Express.Multer.File[]) {
     const imagesUrls = await this.fileService.createFiles(files);
     await Promise.all(
@@ -245,9 +294,21 @@ export class ChatService {
     );
   }
 
-  private async findOrcreateChat(userOneId: number, userTwoId: number) {
+  private async findOrCreateChat(userOneId: number, userTwoId: number) {
     const [chat] = await this.chatRepository.findOrCreate({
       where: {
+        [Op.or]: [
+          {
+            userOneId: userOneId,
+            userTwoId: userTwoId,
+          },
+          {
+            userOneId: userTwoId,
+            userTwoId: userOneId,
+          },
+        ],
+      },
+      defaults: {
         userOneId: userOneId,
         userTwoId: userTwoId,
       },

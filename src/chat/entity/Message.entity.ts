@@ -1,6 +1,7 @@
 import {
   BelongsTo,
   Column,
+  DataType,
   Default,
   ForeignKey,
   HasMany,
@@ -24,6 +25,8 @@ export class Message extends Model<Message> {
   @Column
   chatId: number;
 
+  chat: Chat;
+
   @BelongsTo(() => User, {
     as: 'user',
   })
@@ -31,7 +34,7 @@ export class Message extends Model<Message> {
   @Column
   userId: number;
 
-  @Column
+  @Column(DataType.TEXT('long'))
   message: string;
 
   @HasMany(() => MessageFiles)

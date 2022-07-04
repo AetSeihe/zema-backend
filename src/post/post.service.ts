@@ -236,19 +236,28 @@ export class PostService {
 
   async addComment(token: JwtPayloadType, options: AddCommentDTO) {
     try {
-      const comment = await this.commentRepository.create(
-        {
-          userId: token.userId,
-          postId: options.postId,
-          text: options.text,
-        },
-        {
-          include: [User],
-        },
-      );
+      const comment = await this.commentRepository.create({
+        userId: token.userId,
+        postId: options.postId,
+        text: options.text,
+      });
+
+      const currentComment = await this.commentRepository.findByPk(comment.id, {
+        include: [
+          {
+            model: User,
+            include: [
+              {
+                model: UserMainImage,
+                include: [UserImage],
+              },
+            ],
+          },
+        ],
+      });
       return new CommentResponseDTO({
         message: serviceLocale.comment,
-        comment: new CommentDto(comment.get()),
+        comment: new CommentDto(currentComment.get()),
       });
     } catch (e) {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
@@ -256,23 +265,23 @@ export class PostService {
   }
 
   async deleteComment(token: JwtPayloadType, commentId: number) {
-    try {
-      const comment = await this.commentRepository.findByPk(commentId, {
-        include: [Post],
-      });
-      if (
-        comment.userId != token.userId ||
-        token.userId !== comment.post.userId
-      ) {
+    const comment = await this.commentRepository.findByPk(commentId, {
+      include: [Post],
+    });
+
+    console.log(JSON.stringify(token, null, 2));
+    console.log(JSON.stringify(comment, null, 2));
+    if (comment.userId != token.userId) {
+      if (token.userId != comment.post.userId) {
         throw new ForbiddenException();
       }
-      await comment.destroy();
-      return new CommentResponseDTO({
-        message: serviceLocale.delete_comment,
-        comment: new CommentDto(comment.get()),
-      });
-    } catch (e) {
-      throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
+
+    await comment.destroy();
+
+    return new CommentResponseDTO({
+      message: serviceLocale.delete_comment,
+      comment: new CommentDto(comment.get()),
+    });
   }
 }

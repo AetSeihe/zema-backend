@@ -1,15 +1,15 @@
-import { IsNumberString, IsObject, IsOptional } from 'class-validator';
+import { IsNumber, IsObject, IsOptional } from 'class-validator';
 
 export class GetAllChatDataDTO {
   userName: string;
 }
 
 export class GetAllChatOptionsDTO {
-  @IsNumberString()
+  @IsNumber()
   @IsOptional()
   limit: number;
 
-  @IsNumberString()
+  @IsNumber()
   @IsOptional()
   offset: number;
 }
