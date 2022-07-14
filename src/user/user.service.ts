@@ -50,8 +50,6 @@ export class UserService {
     options.minAge = +options.minAge || 0;
     options.maxAge = +options.maxAge || 999;
 
-    console.log('!!!options', JSON.stringify(options, null, 2));
-
     const currentOptions: any = Object.keys(options).reduce((prev, acc) => {
       if (acc == 'limit' || acc == 'offset') {
         return prev;
@@ -180,7 +178,7 @@ export class UserService {
 
   async update(
     userData: JwtPayloadType,
-    options: UserUpdateDTO,
+    { mainPhotoId, ...options }: UserUpdateDTO,
     images: Express.Multer.File[],
   ) {
     const user = await this.userRepository.findByPk(userData.userId);
@@ -223,13 +221,16 @@ export class UserService {
       return prev;
     }, {});
 
-    if (options.mainPhotoId) {
-      const [mainPhoto] = await this.userMainImageRepository.findOrCreate({
-        where: { userId: user.id },
-      });
-      mainPhoto.update({
-        imageId: +options.mainPhotoId,
-      });
+    if (mainPhotoId) {
+      const photo = await this.userImagesRepository.findByPk(+mainPhotoId);
+      if (photo) {
+        const [mainPhoto] = await this.userMainImageRepository.findOrCreate({
+          where: { userId: user.id },
+        });
+        mainPhoto?.update({
+          imageId: photo.id,
+        });
+      }
     }
 
     await user.update(currentOptions);
@@ -270,6 +271,17 @@ export class UserService {
     if (!image) {
       throw new NotFoundException(HttpStatus.NOT_FOUND);
     }
+
+    const mainPhoto = await this.userMainImageRepository.findOne({
+      where: {
+        userId: userData.userId,
+      },
+    });
+
+    if (mainPhoto?.imageId == image.id) {
+      await mainPhoto.destroy();
+    }
+
     await this.fileService.deleteFileImage(fileName.photo_name);
 
     await image.destroy();
