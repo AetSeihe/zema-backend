@@ -14,11 +14,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { RequestJwtPayloadType } from 'src/auth/types/JwtPayload.type';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
-import {
-  GetAllChatDataDTO,
-  GetAllChatOptionsDTO,
-  GetChatsDTO,
-} from './dto/get-chats.dto';
+import { GetAllChatDataDTO, GetAllChatOptionsDTO } from './dto/get-chats.dto';
 import { GetMessagesDTO } from './dto/get-messages.dto';
 import { SendMessageDTO } from './dto/send-message.dto';
 import { ApiTags, ApiHeader } from '@nestjs/swagger';

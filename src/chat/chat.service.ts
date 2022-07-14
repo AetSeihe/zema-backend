@@ -1,4 +1,5 @@
 import {
+  HttpException,
   HttpStatus,
   Inject,
   Injectable,
@@ -204,7 +205,21 @@ export class ChatService {
     msg: SendMessageDTO,
     files: Express.Multer.File[],
   ) {
+    const companion = await this.userRepository.findByPk(msg.userTo, {
+      include: [
+        {
+          model: UserMainImage,
+          include: [UserImage],
+        },
+      ],
+    });
+
+    if (!companion || msg.userTo == token.userId) {
+      throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    }
+
     const chat = await this.findOrCreateChat(token.userId, msg.userTo);
+
     chat.changed('updatedAt', true);
     await chat.save();
     const message = await this.messageRepository.create({
@@ -238,18 +253,6 @@ export class ChatService {
               include: [Message],
             },
           ],
-        },
-      ],
-    });
-
-    const companionId =
-      chat.userOneId === token.userId ? chat.userTwoId : chat.userOneId;
-
-    const companion = await this.userRepository.findByPk(companionId, {
-      include: [
-        {
-          model: UserMainImage,
-          include: [UserImage],
         },
       ],
     });

@@ -1,4 +1,5 @@
 import {
+  AllowNull,
   BelongsTo,
   Column,
   ForeignKey,
@@ -12,6 +13,7 @@ import { Message } from './Message.entity';
   modelName: 'chat',
 })
 export class Chat extends Model<Chat> {
+  @AllowNull(false)
   @BelongsTo(() => User, {
     as: 'userOne',
   })
@@ -19,6 +21,7 @@ export class Chat extends Model<Chat> {
   @Column
   userOneId: number;
 
+  @AllowNull(false)
   @BelongsTo(() => User, {
     as: 'userTwo',
   })
