@@ -1,4 +1,4 @@
-import { IsEmail, IsMobilePhone, IsNumber, IsString } from 'class-validator';
+import { IsEmail, IsNumber, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateResumeDTO {
@@ -8,7 +8,7 @@ export class CreateResumeDTO {
 
   @ApiProperty()
   @IsNumber()
-  salary: string;
+  salary: number;
 
   @ApiProperty()
   @IsNumber()
@@ -23,7 +23,6 @@ export class CreateResumeDTO {
   cityId: number;
 
   @ApiProperty()
-  @IsMobilePhone('ru-RU')
   phone?: string;
 
   @ApiProperty()

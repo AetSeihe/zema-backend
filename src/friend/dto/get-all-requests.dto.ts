@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { FriendDTO } from './friend.dto';
 
-export class GetAllFriendDTO {
-  constructor(partial: Partial<GetAllFriendDTO>) {
+export class GetAllRequestsDTO {
+  constructor(partial: Partial<GetAllRequestsDTO>) {
     Object.assign(this, partial);
   }
 
@@ -10,5 +10,5 @@ export class GetAllFriendDTO {
   message: string;
 
   @ApiProperty({ type: [FriendDTO] })
-  friends: FriendDTO[];
+  requests: FriendDTO[];
 }

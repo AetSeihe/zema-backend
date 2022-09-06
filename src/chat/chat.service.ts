@@ -57,12 +57,41 @@ export class ChatService {
     options: GetAllChatOptionsDTO,
   ) {
     const chats = await this.chatRepository.findAll({
-      order: [['updatedAt', 'DESC']],
-      where: {
-        [Op.or]: [{ userOneId: token.userId }, { userTwoId: token.userId }],
-      },
+      order: [
+        [Message.associations.chat, 'createdAt', 'DESC'],
+        ['updatedAt', 'DESC'],
+      ],
       limit: +options.limit || 15,
       offset: +options.offset || 0,
+      where: {
+        [Op.and]: [
+          {
+            [Op.or]: [{ userOneId: token.userId }, { userTwoId: token.userId }],
+          },
+          {
+            [Op.or]: {
+              '$userOne.name$': {
+                [Op.substring]: data.userName || '',
+              },
+              '$userTwo.name$': {
+                [Op.substring]: data.userName || '',
+              },
+              '$userOne.surname$': {
+                [Op.substring]: data.userName || '',
+              },
+              '$userTwo.surname$': {
+                [Op.substring]: data.userName || '',
+              },
+              '$userOne.patronomic$': {
+                [Op.substring]: data.userName || '',
+              },
+              '$userTwo.patronomic$': {
+                [Op.substring]: data.userName || '',
+              },
+            },
+          },
+        ],
+      },
       include: [
         {
           model: Message,
@@ -70,117 +99,81 @@ export class ChatService {
           as: 'messages',
           limit: 3,
         },
-      ],
-    });
-
-    const currentСhats: ChatDto[] = [];
-    await Promise.all(
-      chats.map(async (chat) => {
-        const companionId =
-          chat.userOneId === token.userId ? chat.userTwoId : chat.userOneId;
-
-        if (data.userName) {
-          const companion = await this.userRepository.findOne({
-            where: {
-              [Op.or]: [
-                {
-                  name: {
-                    [Op.substring]: data.userName,
-                  },
-                },
-                {
-                  surname: {
-                    [Op.substring]: data.userName,
-                  },
-                },
-                {
-                  patronomic: {
-                    [Op.substring]: data.userName,
-                  },
-                },
-              ],
-            },
-            include: [
-              {
-                model: UserMainImage,
-                include: [UserImage],
-              },
-            ],
-          });
-
-          if (
-            companion &&
-            (companion.id == chat.userOneId || companion.id == chat.userTwoId)
-          ) {
-            currentСhats.push(
-              new ChatDto({
-                ...chat.get(),
-                companion,
-              }),
-            );
-          }
-
-          return;
-        }
-        const companion = await this.userRepository.findByPk(companionId, {
+        {
+          model: User,
+          as: 'userOne',
           include: [
             {
               model: UserMainImage,
               include: [UserImage],
             },
           ],
-        });
-        currentСhats.push(
-          new ChatDto({
-            ...chat.get(),
-            companion,
-          }),
-        );
-      }),
-    );
+        },
+        {
+          model: User,
+          as: 'userTwo',
+          include: [
+            {
+              model: UserMainImage,
+              include: [UserImage],
+            },
+          ],
+        },
+      ],
+    });
+
+    const currentChats = chats.map((chat) => {
+      const companion =
+        chat.userOneId == token.userId ? chat.userTwo : chat.userOne;
+      const user = chat.userOneId == token.userId ? chat.userOne : chat.userTwo;
+      return new ChatDto({
+        ...chat.get(),
+        userOne: undefined,
+        userTwo: undefined,
+        user: user,
+        companion: companion,
+      });
+    });
 
     return new GetAllChatsDTO({
       message: chatLocale.getAll,
-      chats: currentСhats,
+      chats: currentChats,
     });
   }
 
   async getMessages(token: JwtPayloadType, options: GetMessagesDTO) {
-    const chat = await this.chatRepository.findOne({
+    const { messages, ...chat } = await this.chatRepository.findOne({
       where: {
         id: options.chatId,
         [Op.or]: [{ userOneId: token.userId }, { userTwoId: token.userId }],
       },
-    });
-
-    if (!chat) {
-      throw new NotFoundException(HttpStatus.NOT_FOUND);
-    }
-
-    const messages = await this.messageRepository.findAll({
-      limit: +options.limit || 30,
-      offset: +options.offset || 0,
-      order: [['createdAt', 'DESC']],
-      where: {
-        chatId: options.chatId,
-      },
       include: [
-        MessageFiles,
         {
-          model: MessageAndPintedMessage,
+          model: Message,
+          limit: +options.limit || 30,
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore: Unreachable code error
+          offset: +options.offset || 0,
+          order: [['createdAt', 'DESC']],
           include: [
+            MessageFiles,
             {
-              model: PinnedMessages,
+              model: MessageAndPintedMessage,
               include: [
                 {
-                  model: Message,
+                  model: PinnedMessages,
                   include: [
                     {
-                      model: User,
+                      model: Message,
                       include: [
                         {
-                          model: UserMainImage,
-                          include: [UserImage],
+                          model: User,
+                          include: [
+                            {
+                              model: UserMainImage,
+                              include: [UserImage],
+                            },
+                          ],
                         },
                       ],
                     },
@@ -193,6 +186,9 @@ export class ChatService {
       ],
     });
 
+    if (!chat) {
+      throw new NotFoundException(HttpStatus.NOT_FOUND);
+    }
     const currentMessages = messages.map((msg) => new MessageDTO(msg.get()));
     return new MessagesResponseDTO({
       message: chatLocale.messages,
@@ -221,6 +217,7 @@ export class ChatService {
     const chat = await this.findOrCreateChat(token.userId, msg.userTo);
 
     chat.changed('updatedAt', true);
+
     await chat.save();
     const message = await this.messageRepository.create({
       userId: token.userId,

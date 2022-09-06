@@ -1,12 +1,10 @@
 import {
   Body,
-  ClassSerializerInterceptor,
   Controller,
   Get,
   Post,
   Request,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
 import { locale } from 'src/locale';
 import { UserSignUp } from 'src/user/dto/user-signup.dto';
@@ -38,11 +36,11 @@ export class AuthController {
   @Post('login')
   async login(@Request() req): Promise<AuthResponseDTO> {
     const token = await this.authService.login(req.user);
-    return {
+    return new AuthResponseDTO({
       message: localeService.signin,
       token: token.access_token,
       user: new UserDTO(req.user.dataValues),
-    };
+    });
   }
 
   @ApiBody({

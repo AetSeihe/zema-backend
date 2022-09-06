@@ -28,6 +28,7 @@ import {
 import { GetAll } from './dto/get-all.dto';
 import { FindOneDTO } from './dto/find-one.dto';
 import { DeletePhotoDTO } from './dto/delete-photo.dto';
+import { GetUsersByCordsDTO } from './dto/UsersByCords.dto';
 @ApiTags('User')
 @ApiHeader({
   name: 'Authorization',
@@ -36,6 +37,21 @@ import { DeletePhotoDTO } from './dto/delete-photo.dto';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @ApiBody({
+    type: UserGetAllOptionsDTO,
+  })
+  @ApiResponse({
+    type: GetAll,
+  })
+  @UseGuards(JwtAuthGuard)
+  @Post('/all-by-cords')
+  getAllByCords(
+    @Request() req: RequestJwtPayloadType,
+    @Body() data: GetUsersByCordsDTO,
+  ): Promise<GetAll> {
+    return this.userService.getUsersByCords(req.user, data);
+  }
 
   @ApiBody({
     type: UserGetAllOptionsDTO,
@@ -73,6 +89,7 @@ export class UserController {
     @UploadedFiles() images: Express.Multer.File[] = [],
     @Body() options: UserUpdateDTO,
   ): Promise<FindOneDTO> {
+    console.log("I'''' wooooorl!!");
     return this.userService.update(req.user, options, images);
   }
 

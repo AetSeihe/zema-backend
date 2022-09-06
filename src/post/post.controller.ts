@@ -52,10 +52,11 @@ export class PostController {
   @UseGuards(JwtAuthGuard)
   @Post('/all')
   getAll(
+    @Request() res: RequestJwtPayloadType,
     @Body('data') data: GetPostsDataDTO,
     @Body('options') options: GetPostsOptionsDTO,
   ): Promise<GetAllPostsDTO> {
-    return this.postService.getAll(data, options);
+    return this.postService.getAll(res.user, data, options);
   }
 
   @ApiResponse({

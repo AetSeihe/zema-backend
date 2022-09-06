@@ -11,6 +11,8 @@ import { GenderEnum } from 'src/types/GenderEnum';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UserUpdateDTO {
+  id: string;
+
   @ApiProperty({ type: 'string', format: 'binary', required: false })
   file: any;
 
@@ -24,10 +26,8 @@ export class UserUpdateDTO {
   @ApiProperty({
     required: false,
   })
-  @IsMobilePhone('ru-RU')
-  @IsOptional()
-  @IsString()
-  phone?: string;
+  @ApiProperty()
+  phone: string;
 
   @ApiProperty({
     required: false,
@@ -40,7 +40,6 @@ export class UserUpdateDTO {
     required: false,
   })
   @IsOptional()
-  @IsString()
   password?: string;
 
   @ApiProperty({
@@ -126,4 +125,14 @@ export class UserUpdateDTO {
   @IsString()
   patronomic?: string;
   isUpdateProfile: boolean;
+
+  @IsOptional()
+  @IsString()
+  birthday?: string;
+
+  @IsOptional()
+  cordX?: number;
+
+  @IsOptional()
+  cordY?: number;
 }

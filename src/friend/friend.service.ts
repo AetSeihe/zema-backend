@@ -19,6 +19,7 @@ import { UserMainImage } from 'src/user/entity/UserMainImage';
 import { FriendManagerDTO } from './dto/friend-manager.dto';
 import { FriendDTO, FriendManagerItemDTO } from './dto/friend.dto';
 import { GetAllFriendDTO } from './dto/get-all-friend.dto';
+import { GetAllRequestsDTO } from './dto/get-all-requests.dto';
 import { Friend } from './entity/friend.entity';
 import { RequstFriend } from './entity/request.entity';
 
@@ -37,32 +38,52 @@ export class FriendService {
   async getAllFriends(userId: number): Promise<GetAllFriendDTO> {
     const friends = await this.friendRepository.findAll({
       where: {
-        [Op.or]: {
-          userId: userId,
-          friendId: userId,
-        },
+        [Op.or]: [{ userId: userId }, { friendId: userId }],
       },
-    });
-
-    const currentFriends = await Promise.all(
-      friends.map(async (friendObj) => {
-        const friendId =
-          friendObj.userId == userId ? friendObj.friendId : friendObj.userId;
-        const friend = await this.userRepository.findByPk(friendId, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          required: false,
           include: [
             {
               model: UserMainImage,
               include: [UserImage],
             },
           ],
-        });
+          where: {
+            [Op.not]: {
+              id: userId,
+            },
+          },
+        },
+        {
+          model: User,
+          as: 'friend',
+          required: false,
+          include: [
+            {
+              model: UserMainImage,
+              include: [UserImage],
+            },
+          ],
+          where: {
+            [Op.not]: {
+              id: userId,
+            },
+          },
+        },
+      ],
+    });
 
-        return new FriendDTO({
-          ...friendObj.get(),
-          friend: friend,
-        });
-      }),
-    );
+    const currentFriends = friends.map((friendObj) => {
+      const friend = friendObj.user ?? friendObj.friend;
+
+      return new FriendDTO({
+        ...friendObj.get(),
+        friend: friend,
+      });
+    });
 
     return new GetAllFriendDTO({
       message: friendLocale.allFriends,
@@ -73,29 +94,56 @@ export class FriendService {
   async getAllRequests(userId: number) {
     const requests = await this.requestRepository.findAll({
       where: {
-        friendId: userId,
+        [Op.or]: [{ friendId: userId }],
       },
       include: [
         {
           model: User,
+          as: 'user',
+          required: false,
           include: [
             {
               model: UserMainImage,
               include: [UserImage],
             },
           ],
+          where: {
+            [Op.not]: {
+              id: userId,
+            },
+          },
+        },
+        {
+          model: User,
           as: 'friend',
+          required: false,
+          include: [
+            {
+              model: UserMainImage,
+              include: [UserImage],
+            },
+          ],
+          where: {
+            [Op.not]: {
+              id: userId,
+            },
+          },
         },
       ],
     });
 
-    const currentRequests = requests.map(
-      (request) => new FriendDTO(request.get()),
-    );
+    const currentRequests = requests.map((friendObj) => {
+      const friend = friendObj.user ?? friendObj.friend;
 
-    return new GetAllFriendDTO({
+      return new FriendDTO({
+        ...friendObj.get(),
+        friend: friend,
+      });
+    });
+
+    return new GetAllRequestsDTO({
       message: friendLocale.allRequests,
-      friends: currentRequests,
+      requests: currentRequests,
     });
   }
 
@@ -104,19 +152,16 @@ export class FriendService {
       throw new ForbiddenException();
     }
 
-    const friend = await this.friendRepository.findOne({
-      where: {
-        friendId: friendId,
-      },
-    });
-    if (friend) {
-      throw new ForbiddenException();
-    }
-
     const [request, created] = await this.requestRepository.findOrCreate({
       where: {
-        userId: token.userId,
+        [Op.or]: [
+          { friendId: friendId, userId: token.userId },
+          { friendId: token.userId, userId: friendId },
+        ],
+      },
+      defaults: {
         friendId: friendId,
+        userId: token.userId,
       },
     });
 
@@ -132,9 +177,11 @@ export class FriendService {
 
   async acceptRequest(token: JwtPayloadType, requestId: number) {
     const request = await this.requestRepository.findByPk(requestId);
+
     if (!request) {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
+
     if (token.userId == request.userId) {
       throw new ForbiddenException();
     }
@@ -157,7 +204,7 @@ export class FriendService {
     if (!request) {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
-    if (token.userId !== request.friendId) {
+    if (token.userId !== request.friendId && token.userId !== request.userId) {
       throw new ForbiddenException();
     }
     await request.destroy();
@@ -173,7 +220,12 @@ export class FriendService {
     if (!request) {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
+
+    if (request.userId !== token.userId && request.friendId !== token.userId) {
+      throw new ForbiddenException();
+    }
     await request.destroy();
+
     return new FriendManagerDTO({
       message: friendLocale.delete,
       data: new FriendManagerItemDTO(request.get()),

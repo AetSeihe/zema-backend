@@ -13,18 +13,22 @@ import { User } from 'src/user/entity/User.entity';
 export class RequstFriend extends Model<RequstFriend> {
   id: number;
   @ForeignKey(() => User)
-  @BelongsTo(() => User, {
-    as: 'user',
-  })
   @Column
   userId: number;
+
+  @BelongsTo(() => User, {
+    as: 'user',
+    foreignKey: 'userId',
+  })
   user: User;
 
   @ForeignKey(() => User)
-  @BelongsTo(() => User, {
-    as: 'friend',
-  })
   @Column
   friendId: number;
+
+  @BelongsTo(() => User, {
+    as: 'friend',
+    foreignKey: 'friendId',
+  })
   friend: User;
 }

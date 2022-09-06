@@ -23,7 +23,6 @@ export class CreateResumeDTO {
   cityId: number;
 
   @ApiProperty()
-  @IsMobilePhone('ru-RU')
   phone?: string;
 
   @ApiProperty()

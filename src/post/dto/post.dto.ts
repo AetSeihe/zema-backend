@@ -6,12 +6,18 @@ import { PostFiles } from '../enity/PostFiles.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { PostFileDTO } from './post-files.dto';
 import { LikeDto } from './like.dto';
+import { JwtPayloadType } from 'src/auth/types/JwtPayload.type';
 
 export class PostDTO {
-  constructor(partial: Partial<Post>) {
+  constructor(partial: Partial<Post>, token?: JwtPayloadType) {
     Object.assign(this, partial);
 
     this.user = partial.user && new UserDTO(partial.user.get());
+    this.likeCount = partial.likes?.length;
+    this.isLike =
+      token && partial.likes
+        ? partial.likes.some((like) => like.get().userId == token.userId)
+        : false;
   }
 
   @ApiProperty()
@@ -31,6 +37,12 @@ export class PostDTO {
 
   @ApiProperty({ type: [LikeDto] })
   likes: Like[];
+
+  @ApiProperty()
+  likeCount: number;
+
+  @ApiProperty()
+  isLike: boolean;
 
   @ApiProperty({ type: [PostFileDTO] })
   postFiles: PostFiles[];

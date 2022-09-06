@@ -13,6 +13,7 @@ import { FriendService } from './friend.service';
 import { ApiTags, ApiHeader, ApiResponse } from '@nestjs/swagger';
 import { GetAllFriendDTO } from './dto/get-all-friend.dto';
 import { FriendManagerDTO } from './dto/friend-manager.dto';
+import { GetAllRequestsDTO } from './dto/get-all-requests.dto';
 
 @ApiTags('Friends')
 @ApiHeader({
@@ -37,7 +38,7 @@ export class FriendController {
   })
   @UseGuards(JwtAuthGuard)
   @Get('request/:id')
-  getAllRequests(@Param('id') id: number): Promise<GetAllFriendDTO> {
+  getAllRequests(@Param('id') id: number): Promise<GetAllRequestsDTO> {
     return this.friendService.getAllRequests(id);
   }
 

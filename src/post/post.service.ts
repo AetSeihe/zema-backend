@@ -53,17 +53,21 @@ export class PostService {
     private readonly fileService: FileService,
   ) {}
 
-  async getAll(data: GetPostsDataDTO, options: GetPostsOptionsDTO) {
+  async getAll(
+    token: JwtPayloadType,
+    { cityToId, cityFromId, ...data }: GetPostsDataDTO,
+    options: GetPostsOptionsDTO,
+  ) {
     const whereOptions = [];
 
-    if (data.cityToId) {
+    if (cityToId) {
       whereOptions.push({
-        currentCityId: data.cityToId,
+        currentCityId: cityToId,
       });
     }
-    if (data.cityFromId) {
+    if (cityFromId) {
       whereOptions.push({
-        birthCityId: data.cityFromId,
+        birthCityId: cityFromId,
       });
     }
 
@@ -80,7 +84,6 @@ export class PostService {
       whereSuq.where.id = data.userId;
     }
 
-    console.log('!!!whereOptions', whereSuq);
     const allPosts = await this.postRepository.findAll({
       limit: options.limit || 15,
       offset: options.offset || 0,
@@ -113,11 +116,13 @@ export class PostService {
           ],
         },
         PostFiles,
-        Like,
+        {
+          model: Like,
+        },
         Comment,
       ],
     });
-    const allPostsDTO = allPosts.map((post) => new PostDTO(post.get()));
+    const allPostsDTO = allPosts.map((post) => new PostDTO(post.get(), token));
     return new GetAllPostsDTO({
       message: serviceLocale.findAll,
       posts: allPostsDTO,
@@ -174,7 +179,7 @@ export class PostService {
 
     return new OnePostDTO({
       message: serviceLocale.findById,
-      post: new PostDTO(post.get()),
+      post: new PostDTO(post.get(), token),
     });
   }
 

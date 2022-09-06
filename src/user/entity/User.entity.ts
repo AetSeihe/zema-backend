@@ -106,9 +106,9 @@ export class User extends Model {
   @Column(DataType.TEXT('long'))
   interesting: string;
 
-  @Default(18)
+  @Default(new Date())
   @Column
-  age: number;
+  birthday: Date;
 
   @Default('null')
   @Column(
@@ -155,4 +155,12 @@ export class User extends Model {
 
   @HasMany(() => Message)
   messages: Message[];
+
+  @Default(null)
+  @Column(DataType.DOUBLE)
+  cordX: number;
+
+  @Default(null)
+  @Column(DataType.DOUBLE)
+  cordY: number;
 }

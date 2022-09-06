@@ -14,22 +14,29 @@ import { Message } from './Message.entity';
 })
 export class Chat extends Model<Chat> {
   @AllowNull(false)
-  @BelongsTo(() => User, {
-    as: 'userOne',
-  })
   @ForeignKey(() => User)
   @Column
   userOneId: number;
 
-  @AllowNull(false)
   @BelongsTo(() => User, {
-    as: 'userTwo',
+    as: 'userOne',
+    foreignKey: 'userOneId',
   })
+  userOne: User;
+
+  @AllowNull(false)
   @ForeignKey(() => User)
   @Column
   userTwoId: number;
 
+  @BelongsTo(() => User, {
+    as: 'userTwo',
+    foreignKey: 'userTwoId',
+  })
+  userTwo: User;
+
   @HasMany(() => Message)
-  messages: Message;
-  companion: number;
+  messages: Message[];
+
+  companion: User;
 }

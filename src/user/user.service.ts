@@ -30,6 +30,7 @@ import { UserImageDTO } from './dto/user-Image.dto';
 import { DeletePhotoRequestDTO } from './dto/delete-photo-request.dto';
 import { UserMainImage } from './entity/UserMainImage';
 import { City } from 'src/city/entity/City.entity';
+import { GetUsersByCordsDTO } from './dto/UsersByCords.dto';
 
 const userServiceLocale = locale.user.service;
 
@@ -45,6 +46,51 @@ export class UserService {
     private readonly userImagesRepository: typeof UserImage,
     private readonly fileService: FileService,
   ) {}
+
+  async getUsersByCords(
+    token: JwtPayloadType,
+    { options, data }: GetUsersByCordsDTO,
+  ) {
+    const { rows, count } = await this.userRepository.findAndCountAll({
+      limit: options.limit,
+      where: {
+        [Op.and]: {
+          id: {
+            [Op.not]: token.userId,
+          },
+          cordX: {
+            [Op.and]: {
+              [Op.lte]: data.startCordX,
+              [Op.gte]: data.startCordY,
+            },
+          },
+          cordY: {
+            [Op.and]: {
+              [Op.gte]: data.finishCordX,
+              [Op.lte]: data.finishCordY,
+            },
+          },
+        },
+      },
+      include: [
+        {
+          model: UserMainImage,
+          include: [UserImage],
+        },
+      ],
+    });
+
+    const currentUsers = rows.map((user) => new UserDTO(user.get()));
+    console.log(
+      'Все выданные пользователи',
+      JSON.stringify(currentUsers, null, 2),
+    );
+    return new GetAll(
+      'Все пользователи в заданном диапозоне',
+      currentUsers,
+      count,
+    );
+  }
 
   async findAll(options: UserGetAllOptionsDTO): Promise<GetAll> {
     options.minAge = +options.minAge || 0;
@@ -75,10 +121,6 @@ export class UserService {
       limit: +options.limit || 15,
       offset: +options.offset || 0,
       where: {
-        age: {
-          [Op.between]: [options.minAge, options.maxAge],
-        },
-
         ...currentOptions,
       },
       include: [
@@ -145,7 +187,9 @@ export class UserService {
   }
 
   async create(signInDTO: UserSignUp) {
-    const candidate = await this.userRepository.findOne({
+    const currentPassword = await hash(signInDTO.password, 10);
+
+    const [user, created] = await this.userRepository.findOrCreate({
       include: [
         UserImage,
         {
@@ -160,27 +204,26 @@ export class UserService {
           phone: signInDTO.phone,
         },
       },
+      defaults: {
+        name: signInDTO.name,
+        email: signInDTO.email,
+        phone: signInDTO.phone,
+        password: currentPassword,
+      },
     });
 
-    if (candidate) {
+    if (!created) {
       throw new BadRequestException(userServiceLocale.userDataExistError);
     }
-    const currentPassword = await hash(signInDTO.password, 10);
-    const user = await this.userRepository.create({
-      name: signInDTO.name,
-      email: signInDTO.email,
-      phone: signInDTO.phone,
-      password: currentPassword,
-    });
-
     return user.get();
   }
 
   async update(
     userData: JwtPayloadType,
-    { mainPhotoId, ...options }: UserUpdateDTO,
+    { id, mainPhotoId, password, ...options }: UserUpdateDTO,
     images: Express.Multer.File[],
   ) {
+    console.log('options:', JSON.stringify(options, null, 2));
     const user = await this.userRepository.findByPk(userData.userId);
 
     const candidate = await this.userRepository.findOne({
@@ -202,6 +245,7 @@ export class UserService {
     if (candidate) {
       throw new BadRequestException(userServiceLocale.userDataExistError);
     }
+
     const imagesUrls = await this.fileService.createFiles(images);
 
     options.isUpdateProfile = !!imagesUrls.length;
@@ -214,12 +258,19 @@ export class UserService {
       }),
     );
 
-    const currentOptions = Object.keys(options).reduce((prev, acc) => {
+    const currentOptions: any = Object.keys(options).reduce((prev, acc) => {
       if (options[acc] && acc != 'mainPhotoId') {
         prev[acc] = options[acc];
       }
+      if (acc === 'cordX' || acc === 'cordY') {
+        prev[acc] = options[acc] == 0 ? null : options[acc];
+      }
       return prev;
     }, {});
+
+    if (password) {
+      currentOptions.password = await hash(password, 10);
+    }
 
     if (mainPhotoId) {
       const photo = await this.userImagesRepository.findByPk(+mainPhotoId);
@@ -232,8 +283,7 @@ export class UserService {
         });
       }
     }
-
-    await user.update(currentOptions);
+    await user.update({ ...currentOptions });
 
     const currentUser = await this.userRepository.findByPk(user.id, {
       include: [
