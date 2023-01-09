@@ -8,7 +8,10 @@ import {
 import { Op } from 'sequelize';
 import { JwtPayloadType } from 'src/auth/types/JwtPayload.type';
 import { City } from 'src/city/entity/City.entity';
-import { RESUME_REPOSITORY } from 'src/core/providers-names';
+import {
+  RESUME_REPOSITORY,
+  RESUME_SKILLS_REPOSITORY,
+} from 'src/core/providers-names';
 import { locale } from 'src/locale';
 import { User } from 'src/user/entity/User.entity';
 import { UserImage } from 'src/user/entity/UserImage.entity';
@@ -18,6 +21,7 @@ import { GetAllResumeResponseDTO } from './dto/get-all-vacancy-dto';
 import { GetAllResumeDataDTO, GetAllResumeOptionsDTO } from './dto/get-all.dto';
 import { GetResumeResponseDTO } from './dto/get-one-resume';
 import { ResumeDTO } from './dto/resume.dto';
+import { ResumeSkills } from './entity/resume-skills';
 import { Resume } from './entity/resume.enity';
 
 const vacancyLocale = locale.vacancy;
@@ -26,6 +30,8 @@ export class ResumeService {
   constructor(
     @Inject(RESUME_REPOSITORY)
     private readonly resumeRepository: typeof Resume,
+    @Inject(RESUME_SKILLS_REPOSITORY)
+    private readonly skillsRepository: typeof ResumeSkills,
   ) {}
 
   async getAll(data: GetAllResumeDataDTO, options: GetAllResumeOptionsDTO) {
@@ -44,6 +50,7 @@ export class ResumeService {
       order: [['createdAt', options.sortBy || 'DESC']],
       include: [
         City,
+        ResumeSkills,
         {
           model: User,
           include: [
@@ -91,6 +98,8 @@ export class ResumeService {
     const vacancy = await this.resumeRepository.findByPk(resumeId, {
       include: [
         City,
+        ResumeSkills,
+
         {
           model: User,
           include: [
@@ -112,7 +121,10 @@ export class ResumeService {
       vacancy: new ResumeDTO(vacancy.get()),
     });
   }
-  async createResume(token: JwtPayloadType, options: CreateResumeDTO) {
+  async createResume(
+    token: JwtPayloadType,
+    { skills, ...options }: CreateResumeDTO,
+  ) {
     const vacancy = await this.resumeRepository.create({
       userId: token.userId,
       title: options.title,
@@ -122,6 +134,15 @@ export class ResumeService {
       phone: options.phone ?? '',
       email: options.email ?? '',
       salary: +options.salary,
+      employment: options.employment,
+      workFormat: options.workFormat,
+    });
+
+    skills.forEach((item) => {
+      this.skillsRepository.create({
+        title: item,
+        resumeId: vacancy.id,
+      });
     });
 
     return new GetResumeResponseDTO({

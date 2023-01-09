@@ -29,6 +29,7 @@ import { GetAll } from './dto/get-all.dto';
 import { FindOneDTO } from './dto/find-one.dto';
 import { DeletePhotoDTO } from './dto/delete-photo.dto';
 import { GetUsersByCordsDTO } from './dto/UsersByCords.dto';
+import { UserDTO } from './dto/user.dto';
 @ApiTags('User')
 @ApiHeader({
   name: 'Authorization',
@@ -69,9 +70,12 @@ export class UserController {
     type: FindOneDTO,
   })
   @UseGuards(JwtAuthGuard)
-  @Get('/:id')
-  getById(@Param('id') id: number): Promise<FindOneDTO> {
-    return this.userService.findById(id);
+  @Get('/current-user/:id')
+  getById(
+    @Request() req: RequestJwtPayloadType,
+    @Param('id') id: number,
+  ): Promise<FindOneDTO> {
+    return this.userService.findById(req.user, id);
   }
 
   @ApiBody({
@@ -89,7 +93,6 @@ export class UserController {
     @UploadedFiles() images: Express.Multer.File[] = [],
     @Body() options: UserUpdateDTO,
   ): Promise<FindOneDTO> {
-    console.log("I'''' wooooorl!!");
     return this.userService.update(req.user, options, images);
   }
 
@@ -106,5 +109,29 @@ export class UserController {
     @Body() options: DeletePhotoRequestDTO,
   ): Promise<DeletePhotoDTO> {
     return this.userService.deleteImage(req.user, options);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/all-bans')
+  getBanUsers(@Request() req: RequestJwtPayloadType): Promise<UserDTO[]> {
+    return this.userService.getAllBannedUser(req.user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/ban/:id')
+  banUser(
+    @Request() req: RequestJwtPayloadType,
+    @Param('id') id: string,
+  ): Promise<boolean> {
+    return this.userService.banUser(req.user, id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('/ban/:id')
+  unUser(
+    @Request() req: RequestJwtPayloadType,
+    @Param('id') id: string,
+  ): Promise<boolean> {
+    return this.userService.unBan(req.user, id);
   }
 }

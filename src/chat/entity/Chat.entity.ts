@@ -1,5 +1,4 @@
 import {
-  AllowNull,
   BelongsTo,
   Column,
   ForeignKey,
@@ -9,13 +8,14 @@ import {
 } from 'sequelize-typescript';
 import { User } from 'src/user/entity/User.entity';
 import { Message } from './Message.entity';
+import { MessageFile } from './MessageFile.entity';
+
 @Table({
-  modelName: 'chat',
+  tableName: 'chat',
 })
 export class Chat extends Model<Chat> {
-  @AllowNull(false)
-  @ForeignKey(() => User)
   @Column
+  @ForeignKey(() => User)
   userOneId: number;
 
   @BelongsTo(() => User, {
@@ -24,9 +24,8 @@ export class Chat extends Model<Chat> {
   })
   userOne: User;
 
-  @AllowNull(false)
-  @ForeignKey(() => User)
   @Column
+  @ForeignKey(() => User)
   userTwoId: number;
 
   @BelongsTo(() => User, {
@@ -35,8 +34,11 @@ export class Chat extends Model<Chat> {
   })
   userTwo: User;
 
-  @HasMany(() => Message)
+  @HasMany(() => Message, {
+    as: 'messages',
+  })
   messages: Message[];
 
-  companion: User;
+  @HasMany(() => MessageFile)
+  files: MessageFile[];
 }

@@ -1,10 +1,10 @@
-import { ChatDto } from './chat.dto';
+import { IsNumberString } from 'class-validator';
 
 export class GetAllChatsDTO {
   constructor(partial: Partial<GetAllChatsDTO>) {
     Object.assign(this, partial);
   }
 
-  message: string;
-  chats: ChatDto[];
+  limit: string;
+  offset: string;
 }

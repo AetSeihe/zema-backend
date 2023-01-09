@@ -1,5 +1,7 @@
-import { IsEmail, IsMobilePhone, IsNumber, IsString } from 'class-validator';
+import { IsEmail, IsNumber, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { EmploymentEnum } from 'src/types/EmploymentEnum';
+import { WorkFormat } from 'src/types/WorkFormat';
 
 export class CreateResumeDTO {
   @ApiProperty()
@@ -28,4 +30,9 @@ export class CreateResumeDTO {
   @ApiProperty()
   @IsEmail()
   email?: string;
+
+  skills: string[];
+
+  employment: EmploymentEnum;
+  workFormat: WorkFormat;
 }

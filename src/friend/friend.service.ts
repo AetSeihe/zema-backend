@@ -10,9 +10,10 @@ import { JwtPayloadType } from 'src/auth/types/JwtPayload.type';
 import {
   FRIEND_REPOSITORY,
   REQUEST_REPOSITORY,
-  USER_REPOSITORY,
+  USER_BANNED,
 } from 'src/core/providers-names';
 import { locale } from 'src/locale';
+import { UserBanned } from 'src/user/entity/user-banned.entity';
 import { User } from 'src/user/entity/User.entity';
 import { UserImage } from 'src/user/entity/UserImage.entity';
 import { UserMainImage } from 'src/user/entity/UserMainImage';
@@ -29,7 +30,8 @@ const friendLocale = locale.friends;
 export class FriendService {
   constructor(
     @Inject(FRIEND_REPOSITORY) private readonly friendRepository: typeof Friend,
-    @Inject(USER_REPOSITORY) private readonly userRepository: typeof User,
+    @Inject(USER_BANNED)
+    private readonly userBannedRepository: typeof UserBanned,
 
     @Inject(REQUEST_REPOSITORY)
     private readonly requestRepository: typeof RequstFriend,
@@ -94,7 +96,7 @@ export class FriendService {
   async getAllRequests(userId: number) {
     const requests = await this.requestRepository.findAll({
       where: {
-        [Op.or]: [{ friendId: userId }],
+        friendId: userId,
       },
       include: [
         {
@@ -152,7 +154,7 @@ export class FriendService {
       throw new ForbiddenException();
     }
 
-    const [request, created] = await this.requestRepository.findOrCreate({
+    const [request] = await this.requestRepository.findOrCreate({
       where: {
         [Op.or]: [
           { friendId: friendId, userId: token.userId },
@@ -165,10 +167,6 @@ export class FriendService {
       },
     });
 
-    if (!created) {
-      throw new ForbiddenException();
-    }
-
     return new FriendManagerDTO({
       message: friendLocale.send,
       data: new FriendManagerItemDTO(request.get()),
@@ -177,7 +175,6 @@ export class FriendService {
 
   async acceptRequest(token: JwtPayloadType, requestId: number) {
     const request = await this.requestRepository.findByPk(requestId);
-
     if (!request) {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
@@ -229,6 +226,17 @@ export class FriendService {
     return new FriendManagerDTO({
       message: friendLocale.delete,
       data: new FriendManagerItemDTO(request.get()),
+    });
+  }
+
+  async findFriendByIdIfNotExist(userOneId: number, userTwoId: number) {
+    return this.friendRepository.findOne({
+      where: {
+        [Op.or]: [
+          { friendId: userOneId, userId: userTwoId },
+          { friendId: userTwoId, userId: userOneId },
+        ],
+      },
     });
   }
 }

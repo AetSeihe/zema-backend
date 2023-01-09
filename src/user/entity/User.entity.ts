@@ -1,7 +1,6 @@
 import {
   AllowNull,
   BelongsTo,
-  BelongsToMany,
   Column,
   DataType,
   Default,
@@ -13,8 +12,6 @@ import {
   Table,
   Validate,
 } from 'sequelize-typescript';
-import { Chat } from 'src/chat/entity/Chat.entity';
-import { Message } from 'src/chat/entity/Message.entity';
 import { City } from 'src/city/entity/City.entity';
 import { MIN_PASSWORD_LENGHT } from 'src/core/constants';
 import { Friend } from 'src/friend/entity/friend.entity';
@@ -26,6 +23,7 @@ import { Post } from 'src/post/enity/Post.enity';
 import { EducationEnum } from 'src/types/EducationEnum';
 import { GenderEnum } from 'src/types/GenderEnum';
 import { Vacancy } from 'src/vacancy/entity/vacancy.enity';
+import { UserBanned } from './user-banned.entity';
 import { UserImage } from './UserImage.entity';
 import { UserMainImage } from './UserMainImage';
 
@@ -110,21 +108,9 @@ export class User extends Model {
   @Column
   birthday: Date;
 
-  @Default('null')
-  @Column(
-    DataType.ENUM(
-      'null',
-      'average',
-      'secondary_special',
-      'unfinished_higher_education',
-      'higher',
-      'bachelor_degree',
-      'master',
-      'candidate',
-      'doctor',
-    ),
-  )
-  education: EducationEnum;
+  @Default('')
+  @Column
+  education: string;
 
   @HasMany(() => UserImage)
   images: UserImage[];
@@ -150,12 +136,6 @@ export class User extends Model {
   @HasMany(() => Vacancy)
   resumes: Vacancy[];
 
-  @HasMany(() => Chat)
-  chats: Chat[];
-
-  @HasMany(() => Message)
-  messages: Message[];
-
   @Default(null)
   @Column(DataType.DOUBLE)
   cordX: number;
@@ -163,4 +143,7 @@ export class User extends Model {
   @Default(null)
   @Column(DataType.DOUBLE)
   cordY: number;
+
+  @HasMany(() => UserBanned)
+  banned: UserBanned[];
 }

@@ -4,13 +4,12 @@ import {
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  SubscribeMessage,
 } from '@nestjs/websockets';
 import { Logger, UseGuards } from '@nestjs/common';
 import { Socket, Server } from 'socket.io';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
-@WebSocketGateway(305)
+@WebSocketGateway(3001)
 export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
@@ -18,11 +17,6 @@ export class ChatGateway
   server: Server;
 
   private logger: Logger = new Logger('AppGateway');
-
-  // @SubscribeMessage('msgToServer')
-  // handleMessage(client: Socket, payload: string): void {
-  //   this.server.emit('msgToClient', payload);
-  // }
 
   afterInit(server: Server) {
     this.logger.log('Init');

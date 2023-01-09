@@ -51,7 +51,7 @@ export class VacancyController {
   @UseGuards(JwtAuthGuard)
   @Get('/:id')
   getById(@Param('id') id: number): Promise<GetVacancyResponseDTO> {
-    return this.vacansyService.getResumeById(+id);
+    return this.vacansyService.getVacancyById(+id);
   }
 
   @ApiResponse({
@@ -63,7 +63,8 @@ export class VacancyController {
     @Request() req: RequestJwtPayloadType,
     @Body() options: CreateResumeDTO,
   ): Promise<GetVacancyResponseDTO> {
-    return this.vacansyService.createResume(req.user, options);
+    console.log('-====== Я создал новую вакансию');
+    return this.vacansyService.createVacancy(req.user, options);
   }
 
   @ApiResponse({
@@ -75,6 +76,6 @@ export class VacancyController {
     @Request() req: RequestJwtPayloadType,
     @Param('id') id: number,
   ): Promise<GetVacancyResponseDTO> {
-    return this.vacansyService.deleteResumeById(req.user, id);
+    return this.vacansyService.deleteVacancyById(req.user, id);
   }
 }

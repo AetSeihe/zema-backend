@@ -8,8 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { PostModule } from './post/post.module';
 import { FriendModule } from './friend/friend.module';
 import { VacancyModule } from './vacancy/vacancy.module';
-import { ChatModule } from './chat/chat.module';
 import { ResumeModule } from './resume/resume.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -24,9 +24,10 @@ import { ResumeModule } from './resume/resume.module';
     AuthModule,
     PostModule,
     FriendModule,
-    ChatModule,
     VacancyModule,
     ResumeModule,
+    ChatModule,
   ],
+  controllers: [],
 })
 export class AppModule {}

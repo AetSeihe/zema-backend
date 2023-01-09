@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  forwardRef,
   HttpException,
   HttpStatus,
   Inject,
@@ -8,6 +9,7 @@ import {
 } from '@nestjs/common';
 import {
   CITY_REPOSITORY,
+  USER_BANNED,
   USER_IMAGES_REPOSITORY,
   USER_MAIN_IMAGE_REPOSITORY,
   USER_REPOSITORY,
@@ -31,6 +33,8 @@ import { DeletePhotoRequestDTO } from './dto/delete-photo-request.dto';
 import { UserMainImage } from './entity/UserMainImage';
 import { City } from 'src/city/entity/City.entity';
 import { GetUsersByCordsDTO } from './dto/UsersByCords.dto';
+import { UserBanned } from './entity/user-banned.entity';
+import { FriendService } from 'src/friend/friend.service';
 
 const userServiceLocale = locale.user.service;
 
@@ -41,7 +45,8 @@ export class UserService {
     @Inject(CITY_REPOSITORY) private readonly cityRepository: typeof City,
     @Inject(USER_MAIN_IMAGE_REPOSITORY)
     private readonly userMainImageRepository: typeof UserMainImage,
-
+    @Inject(USER_BANNED)
+    private readonly userBannedRepository: typeof UserBanned,
     @Inject(USER_IMAGES_REPOSITORY)
     private readonly userImagesRepository: typeof UserImage,
     private readonly fileService: FileService,
@@ -77,14 +82,14 @@ export class UserService {
           model: UserMainImage,
           include: [UserImage],
         },
+        {
+          model: City,
+          as: 'birthCity',
+        },
       ],
     });
 
     const currentUsers = rows.map((user) => new UserDTO(user.get()));
-    console.log(
-      'Все выданные пользователи',
-      JSON.stringify(currentUsers, null, 2),
-    );
     return new GetAll(
       'Все пользователи в заданном диапозоне',
       currentUsers,
@@ -138,8 +143,11 @@ export class UserService {
     return new GetAll(userServiceLocale.findAll, usersDTO);
   }
 
-  async findById(userId: number) {
-    const candidate = await this.userRepository.findByPk(userId, {
+  async findById(token: JwtPayloadType, userId: number) {
+    const candidate = await this.userRepository.findOne({
+      where: {
+        id: userId,
+      },
       include: [
         UserImage,
         {
@@ -147,9 +155,25 @@ export class UserService {
           attributes: ['imageId'],
           include: [UserImage],
         },
+        {
+          model: UserBanned,
+          required: false,
+          where: {
+            [Op.or]: [
+              {
+                userId: userId,
+                bannedUserId: token.userId,
+              },
+              {
+                userId: token.userId,
+                bannedUserId: userId,
+              },
+            ],
+          },
+        },
       ],
     });
-    if (!candidate) {
+    if (!candidate || candidate.banned.length) {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
 
@@ -223,7 +247,6 @@ export class UserService {
     { id, mainPhotoId, password, ...options }: UserUpdateDTO,
     images: Express.Multer.File[],
   ) {
-    console.log('options:', JSON.stringify(options, null, 2));
     const user = await this.userRepository.findByPk(userData.userId);
 
     const candidate = await this.userRepository.findOne({
@@ -340,5 +363,55 @@ export class UserService {
       message: userServiceLocale.deletePhoto,
       image: new UserImageDTO(image.get()),
     });
+  }
+
+  async banUser(token: JwtPayloadType, userId: string) {
+    await this.userBannedRepository.findOrCreate({
+      where: {
+        userId: token.userId,
+        bannedUserId: +userId,
+      },
+    });
+    return true;
+  }
+
+  async unBan(token: JwtPayloadType, userId: string) {
+    try {
+      const candidate = await this.userBannedRepository.findOne({
+        where: {
+          userId: token.userId,
+          bannedUserId: +userId,
+        },
+      });
+      if (candidate) {
+        await candidate.destroy();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async getAllBannedUser(token: JwtPayloadType) {
+    const banned = await this.userBannedRepository.findAll({
+      where: {
+        userId: token.userId,
+      },
+      include: [
+        {
+          model: User,
+          as: 'bannedUser',
+          include: [
+            {
+              model: UserMainImage,
+              include: [UserImage],
+            },
+          ],
+        },
+      ],
+    });
+
+    return banned.map((ban) => new UserDTO(ban.bannedUser.get()));
   }
 }

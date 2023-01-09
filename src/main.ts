@@ -1,4 +1,3 @@
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -7,8 +6,17 @@ import { FastifyAdapter } from '@nestjs/platform-fastify';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   new FastifyAdapter({ bodyLimit: 10048576 });
-  app.useGlobalPipes(new ValidationPipe());
   app.enableCors();
+
+  // app.useGlobalPipes(
+  //   new ValidationPipe({
+  //     whitelist: true,
+  //     transform: true,
+  //   }),
+  // );
+
+  // app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+
   if (process.env.__DEV__) {
     const config = new DocumentBuilder()
       .setTitle('Documentation zema')

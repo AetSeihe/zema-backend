@@ -1,318 +1,547 @@
 import {
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Inject,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
 import { Op } from 'sequelize';
 import { JwtPayloadType } from 'src/auth/types/JwtPayload.type';
 import {
   CHAT_REPOSITORY,
-  MESSAGE_AND_PINED_REPOSITORY,
-  MESSAGE_FILES_REPOSITORY,
-  MESSAGE_PINED_REPOSITORY,
+  MESSAGE_FILE,
   MESSAGE_REPOSITORY,
-  USER_REPOSITORY,
+  REPLY_MESSAGE,
+  USER_BANNED,
 } from 'src/core/providers-names';
 import { FileService } from 'src/file/file.service';
-import { locale } from 'src/locale';
+import { UserBanned } from 'src/user/entity/user-banned.entity';
 import { User } from 'src/user/entity/User.entity';
-import { UserImage } from 'src/user/entity/UserImage.entity';
-import { UserMainImage } from 'src/user/entity/UserMainImage';
-import { ChatDto } from './dto/chat.dto';
-import { GetAllChatsDTO } from './dto/get-all-chats.dto';
-import { GetAllChatDataDTO, GetAllChatOptionsDTO } from './dto/get-chats.dto';
-import { GetMessagesDTO, MessagesResponseDTO } from './dto/get-messages.dto';
-import { MessageDTO } from './dto/message.dto';
-import { ReadMessageDTO } from './dto/read-message.dto';
-import { SendMessageDTO } from './dto/send-message.dto';
+import { CreateChatDTO } from './dto/in/create-chat.dto';
+import { GetAllChatsDTO } from './dto/in/get-all-chats.dto';
+import { GetChatMessagesDTO } from './dto/in/get-chat-messages.dto';
+import { GetChatsByMessageDTO } from './dto/in/get-chats-by-message.dto';
+import { GetUsersInChats } from './dto/in/get-users-in-chats.dto';
+import { ReadMessageDTO } from './dto/in/read-message';
+import { SendMessageDTO } from './dto/in/send-message.dto';
+import { AllChatsDTO } from './dto/out/all-chats.dto';
+import { AllMessagessDTO } from './dto/out/all-messages.dto';
+import { ChatDTO } from './dto/out/chat.dto';
+import { MessageDTO } from './dto/out/message.dto';
 import { Chat } from './entity/Chat.entity';
 import { Message } from './entity/Message.entity';
-import { MessageAndPintedMessage } from './entity/MessageAndPintedMessage';
-import { MessageFiles } from './entity/MessageFiles.entity';
-import { PinnedMessages } from './entity/PinnedMessages.entity';
+import { MessageFile } from './entity/MessageFile.entity';
+import { ReplyMessage } from './entity/ReplyMessage';
 
-const chatLocale = locale.chat;
 @Injectable()
 export class ChatService {
   constructor(
-    private readonly fileService: FileService,
-    @Inject(CHAT_REPOSITORY) private readonly chatRepository: typeof Chat,
-    @Inject(USER_REPOSITORY) private readonly userRepository: typeof User,
-    @Inject(MESSAGE_AND_PINED_REPOSITORY)
-    private readonly pinnedMsgRepository: typeof MessageAndPintedMessage,
-
-    @Inject(MESSAGE_PINED_REPOSITORY)
-    private readonly pinnedRepository: typeof PinnedMessages,
-    @Inject(MESSAGE_FILES_REPOSITORY)
-    private readonly filesRepository: typeof User,
     @Inject(MESSAGE_REPOSITORY)
     private readonly messageRepository: typeof Message,
+    @Inject(CHAT_REPOSITORY)
+    private readonly chatRepository: typeof Chat,
+    @Inject(MESSAGE_FILE)
+    private readonly filesRepository: typeof MessageFile,
+    @Inject(REPLY_MESSAGE)
+    private readonly replyMessageRepository: typeof ReplyMessage,
+    private readonly fileService: FileService,
+    @Inject(USER_BANNED)
+    private readonly userBannedRepository: typeof UserBanned,
   ) {}
 
-  async getAllChats(
+  async getChatsByMessageText(
     token: JwtPayloadType,
-    data: GetAllChatDataDTO,
-    options: GetAllChatOptionsDTO,
+    data: GetChatsByMessageDTO,
   ) {
     const chats = await this.chatRepository.findAll({
-      order: [
-        [Message.associations.chat, 'createdAt', 'DESC'],
-        ['updatedAt', 'DESC'],
-      ],
-      limit: +options.limit || 15,
-      offset: +options.offset || 0,
+      order: [['updatedAt', 'DESC']],
+      limit: 10,
       where: {
-        [Op.and]: [
+        [Op.or]: [
           {
-            [Op.or]: [{ userOneId: token.userId }, { userTwoId: token.userId }],
+            userOneId: token.userId,
           },
           {
-            [Op.or]: {
-              '$userOne.name$': {
-                [Op.substring]: data.userName || '',
-              },
-              '$userTwo.name$': {
-                [Op.substring]: data.userName || '',
-              },
-              '$userOne.surname$': {
-                [Op.substring]: data.userName || '',
-              },
-              '$userTwo.surname$': {
-                [Op.substring]: data.userName || '',
-              },
-              '$userOne.patronomic$': {
-                [Op.substring]: data.userName || '',
-              },
-              '$userTwo.patronomic$': {
-                [Op.substring]: data.userName || '',
-              },
-            },
+            userTwoId: token.userId,
           },
         ],
       },
       include: [
         {
-          model: Message,
+          where: {
+            message: {
+              [Op.substring]: data.text,
+            },
+          },
+          required: true,
           order: [['createdAt', 'DESC']],
+          model: Message,
           as: 'messages',
-          limit: 3,
+          limit: 1,
         },
         {
           model: User,
           as: 'userOne',
-          include: [
-            {
-              model: UserMainImage,
-              include: [UserImage],
+          required: false,
+          where: {
+            [Op.not]: {
+              id: token.userId,
             },
-          ],
+          },
         },
         {
           model: User,
           as: 'userTwo',
-          include: [
-            {
-              model: UserMainImage,
-              include: [UserImage],
+          required: false,
+          where: {
+            [Op.not]: {
+              id: token.userId,
             },
-          ],
+          },
         },
       ],
     });
 
-    const currentChats = chats.map((chat) => {
-      const companion =
-        chat.userOneId == token.userId ? chat.userTwo : chat.userOne;
-      const user = chat.userOneId == token.userId ? chat.userOne : chat.userTwo;
-      return new ChatDto({
-        ...chat.get(),
-        userOne: undefined,
-        userTwo: undefined,
-        user: user,
-        companion: companion,
-      });
-    });
+    const currentChat = chats.filter((chat) => chat.messages.length > 0);
 
-    return new GetAllChatsDTO({
-      message: chatLocale.getAll,
-      chats: currentChats,
+    return new AllChatsDTO({
+      chats: currentChat.map((chat) => new ChatDTO(chat.get())),
     });
   }
 
-  async getMessages(token: JwtPayloadType, options: GetMessagesDTO) {
-    const { messages, ...chat } = await this.chatRepository.findOne({
+  async getUsersInChats(token: JwtPayloadType, data: GetUsersInChats) {
+    const variantsNick = data.name.split(' ');
+    const chats = await this.chatRepository.findAll({
+      order: [['updatedAt', 'DESC']],
+      limit: 10,
       where: {
-        id: options.chatId,
-        [Op.or]: [{ userOneId: token.userId }, { userTwoId: token.userId }],
+        [Op.or]: [
+          {
+            userOneId: token.userId,
+          },
+          {
+            userTwoId: token.userId,
+          },
+        ],
       },
       include: [
         {
-          model: Message,
-          limit: +options.limit || 30,
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore: Unreachable code error
-          offset: +options.offset || 0,
-          order: [['createdAt', 'DESC']],
-          include: [
-            MessageFiles,
-            {
-              model: MessageAndPintedMessage,
-              include: [
-                {
-                  model: PinnedMessages,
-                  include: [
-                    {
-                      model: Message,
-                      include: [
-                        {
-                          model: User,
-                          include: [
-                            {
-                              model: UserMainImage,
-                              include: [UserImage],
-                            },
-                          ],
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
+          model: User,
+          as: 'userOne',
+          required: false,
+          where: {
+            [Op.not]: {
+              id: token.userId,
             },
-          ],
+            [Op.or]: [
+              { name: variantsNick },
+              { surname: variantsNick },
+              { patronomic: variantsNick },
+            ],
+          },
+        },
+        {
+          model: User,
+          as: 'userTwo',
+          required: false,
+          where: {
+            [Op.not]: {
+              id: token.userId,
+            },
+            [Op.or]: [
+              { name: variantsNick },
+              { surname: variantsNick },
+              { patronomic: variantsNick },
+            ],
+          },
         },
       ],
     });
 
-    if (!chat) {
-      throw new NotFoundException(HttpStatus.NOT_FOUND);
-    }
-    const currentMessages = messages.map((msg) => new MessageDTO(msg.get()));
-    return new MessagesResponseDTO({
-      message: chatLocale.messages,
-      messages: currentMessages,
+    const currentChats = chats.filter((chat) => chat.userOne || chat.userTwo);
+
+    return new AllChatsDTO({
+      chats: currentChats.map((chat) => new ChatDTO(chat.get())),
+    });
+  }
+
+  async getAllChats(
+    token: JwtPayloadType,
+    options: GetAllChatsDTO,
+  ): Promise<AllChatsDTO> {
+    const chats = await this.chatRepository.findAll({
+      group: 'id',
+      order: [['updatedAt', 'DESC']],
+      limit: +options.limit,
+      offset: +options.offset,
+      where: {
+        [Op.or]: [
+          {
+            userOneId: token.userId,
+          },
+          {
+            userTwoId: token.userId,
+          },
+        ],
+      },
+      include: [
+        {
+          order: [['createdAt', 'DESC']],
+          model: Message,
+          as: 'messages',
+          limit: 1,
+        },
+        {
+          model: User,
+          as: 'userOne',
+          required: false,
+          where: {
+            [Op.not]: {
+              id: token.userId,
+            },
+          },
+        },
+        {
+          model: User,
+          as: 'userTwo',
+          required: false,
+          where: {
+            [Op.not]: {
+              id: token.userId,
+            },
+          },
+        },
+      ],
+    });
+
+    const currentChats = chats.filter((chat) => chat.messages.length !== 0);
+
+    return new AllChatsDTO({
+      chats: currentChats.map((chat) => new ChatDTO(chat.get())),
+      unreadedMessagesCount: 1,
     });
   }
 
   async sendMessage(
     token: JwtPayloadType,
-    msg: SendMessageDTO,
+    data: SendMessageDTO,
     files: Express.Multer.File[],
-  ) {
-    const companion = await this.userRepository.findByPk(msg.userTo, {
-      include: [
-        {
-          model: UserMainImage,
-          include: [UserImage],
-        },
-      ],
+  ): Promise<[string, MessageDTO, Chat]> {
+    const userOneId = token.userId.toString();
+    const userTwoId = data.userTo;
+    const candidate = await this.userBannedRepository.findOne({
+      where: {
+        [Op.or]: [
+          {
+            userId: token.userId,
+            bannedUserId: userTwoId,
+          },
+          {
+            userId: userTwoId,
+            bannedUserId: token.userId,
+          },
+        ],
+      },
     });
 
-    if (!companion || msg.userTo == token.userId) {
-      throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    if (candidate) {
+      throw new ForbiddenException();
     }
 
-    const chat = await this.findOrCreateChat(token.userId, msg.userTo);
-
-    chat.changed('updatedAt', true);
-
-    await chat.save();
-    const message = await this.messageRepository.create({
-      userId: token.userId,
-      chatId: chat.id,
-      message: msg.message,
-    });
-
-    await this.uploadFiles(message.id, files);
-
-    if (msg.pinnedMessage) {
-      const p = await this.pinnedMsgRepository.create({
-        rootMessageId: message.id,
-      });
-      await this.pinnedRepository.create({
-        messageId: msg.pinnedMessage,
-        messageAndPintedMessageId: p.id,
-      });
-    }
-
-    const currentMessage = await this.messageRepository.findByPk(message.id, {
-      include: [
-        MessageFiles,
-        Chat,
-        User,
-        {
-          model: MessageAndPintedMessage,
-          include: [
-            {
-              model: PinnedMessages,
-              include: [Message],
-            },
-          ],
-        },
-      ],
-    });
-
-    return new MessageDTO({
-      ...currentMessage.get(),
-      companion,
-    });
-  }
-
-  async readMessages(token: JwtPayloadType, msg: ReadMessageDTO) {
-    try {
-      Promise.all(
-        msg.messagesId.map(async (msgId) => {
-          const message = await this.messageRepository.findByPk(msgId, {
-            include: [Chat],
-          });
-          if (
-            message.chat.userOneId === token.userId ||
-            message.chat.userTwoId === token.userId
-          ) {
-            message.update({
-              readed: true,
-            });
-          }
-        }),
-      );
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-  private async uploadFiles(messageId: number, files: Express.Multer.File[]) {
-    const imagesUrls = await this.fileService.createFiles(files);
-    await Promise.all(
-      imagesUrls.map((path) => {
-        return this.filesRepository.create({
-          fileName: path,
-          messageId: messageId,
-        });
-      }),
-    );
-  }
-
-  private async findOrCreateChat(userOneId: number, userTwoId: number) {
     const [chat] = await this.chatRepository.findOrCreate({
       where: {
         [Op.or]: [
           {
-            userOneId: userOneId,
-            userTwoId: userTwoId,
+            userOneId: +userOneId,
+            userTwoId: +userTwoId,
           },
           {
-            userOneId: userTwoId,
-            userTwoId: userOneId,
+            userOneId: +userTwoId,
+            userTwoId: +userOneId,
           },
         ],
       },
       defaults: {
-        userOneId: userOneId,
-        userTwoId: userTwoId,
+        userOneId: +userOneId,
+        userTwoId: +userTwoId,
       },
     });
+
+    const message = await this.messageRepository.create({
+      chatId: chat.id,
+      message: data.message,
+      userId: token.userId,
+    });
+
+    if (data.replyMessageId) {
+      this.replyMessageRepository.create({
+        messageId: message.id,
+        replyMessageId: +data.replyMessageId,
+      });
+    }
+
+    if (files && files.length > 0) {
+      const filesName = await this.fileService.createFiles(files);
+      await Promise.all(
+        filesName.map((fileName, i) => {
+          return this.filesRepository.create({
+            fileName: fileName,
+            fileType: files[i].mimetype || 'none',
+            chatId: chat.id,
+            messageId: message.id,
+          });
+        }),
+      );
+    }
+    chat.changed('updatedAt', true);
+    chat.updatedAt = new Date();
+    await chat.save();
+
+    const currentChat = await this.chatRepository.findByPk(chat.id, {
+      include: [
+        {
+          model: Message,
+          limit: 1,
+          order: [['createdAt', 'DESC']],
+        },
+        {
+          model: User,
+          as: 'userOne',
+          required: false,
+          where: {
+            id: token.userId,
+          },
+        },
+        {
+          model: User,
+          as: 'userTwo',
+          required: false,
+          where: {
+            id: token.userId,
+          },
+        },
+      ],
+    });
+    const currentMessage = await this.messageRepository.findByPk(message.id, {
+      include: [
+        {
+          model: ReplyMessage,
+          include: [
+            {
+              model: Message,
+              as: 'reply',
+            },
+          ],
+        },
+        {
+          model: MessageFile,
+        },
+      ],
+    });
+
+    return [data.userTo, new MessageDTO(currentMessage.get()), currentChat];
+  }
+
+  async readMessage(
+    token: JwtPayloadType,
+    data: ReadMessageDTO,
+  ): Promise<[MessageDTO[], ChatDTO]> {
+    const messageId = data.messagesId[0];
+
+    if (!messageId) {
+      throw new HttpException('Чат не найден', HttpStatus.NOT_FOUND);
+    }
+
+    const currentChat = await this.chatRepository.findOne({
+      include: [
+        {
+          model: Message,
+          limit: 1,
+          order: [['createdAt', 'DESC']],
+          where: {
+            id: messageId,
+          },
+        },
+        {
+          model: User,
+          as: 'userOne',
+          required: false,
+          where: {
+            id: token.userId,
+          },
+        },
+        {
+          model: User,
+          as: 'userTwo',
+          required: false,
+          where: {
+            id: token.userId,
+          },
+        },
+      ],
+    });
+
+    if (!currentChat) {
+      throw new HttpException('Чат не найден', HttpStatus.NOT_FOUND);
+    }
+    // const message = await this.messageRepository.findByPk(data.messageId);
+
+    try {
+      const messages: Message[] = await Promise.all(
+        data.messagesId.map(async (item) => {
+          const message = await this.messageRepository.findByPk(item, {});
+          message.readed = true;
+          message.save();
+          return message;
+        }),
+      );
+
+      return [
+        messages.map((message) => new MessageDTO(message.get())),
+        new ChatDTO(currentChat.get()),
+      ];
+    } catch (e) {
+      throw new HttpException(
+        'Ошибка при продчетнии сообщений',
+        HttpStatus.NO_CONTENT,
+      );
+    }
+  }
+
+  async getChatMessages(
+    token: JwtPayloadType,
+    data: GetChatMessagesDTO,
+  ): Promise<AllMessagessDTO> {
+    const chat = await this.chatRepository.findByPk(+data.chatId);
+
+    if (!chat) {
+      throw new HttpException('Чат не найден', HttpStatus.NOT_FOUND);
+    }
+
+    if (chat.userOneId !== token.userId && chat.userTwoId !== token.userId) {
+      throw new HttpException('Чат не найден 123', HttpStatus.NOT_FOUND);
+    }
+
+    const messages = await this.messageRepository.findAll({
+      order: [['createdAt', 'DESC']],
+      limit: +data.limit,
+      offset: +data.offset,
+      include: [
+        {
+          model: ReplyMessage,
+          include: [
+            {
+              model: Message,
+              as: 'reply',
+            },
+          ],
+        },
+        {
+          model: MessageFile,
+        },
+      ],
+      where: {
+        chatId: +data.chatId,
+      },
+    });
+
+    return new AllMessagessDTO({
+      messages: messages.map((message) => new MessageDTO(message.get())),
+    });
+  }
+
+  async createChatIfNotExist(data: CreateChatDTO) {
+    const [chat] = await this.chatRepository.findOrCreate({
+      where: {
+        [Op.or]: [
+          {
+            userOneId: +data.userOneId,
+            userTwoId: +data.userTwoId,
+          },
+          {
+            userOneId: +data.userTwoId,
+            userTwoId: +data.userOneId,
+          },
+        ],
+      },
+      defaults: {
+        userOneId: +data.userOneId,
+        userTwoId: +data.userTwoId,
+      },
+    });
+
+    return chat;
+  }
+
+  async getOrCreateChatIfNotExistWithCompanion(
+    token: JwtPayloadType,
+    data: CreateChatDTO,
+  ) {
+    const candidate = await this.userBannedRepository.findOne({
+      where: {
+        [Op.or]: [
+          {
+            userId: token.userId,
+            bannedUserId: data.userTwoId,
+          },
+          {
+            userId: data.userTwoId,
+            bannedUserId: token.userId,
+          },
+        ],
+      },
+    });
+
+    if (candidate) {
+      throw new ForbiddenException();
+    }
+
+    const [chat] = await this.chatRepository.findOrCreate({
+      where: {
+        [Op.or]: [
+          {
+            userOneId: +data.userOneId,
+            userTwoId: +data.userTwoId,
+          },
+          {
+            userOneId: +data.userTwoId,
+            userTwoId: +data.userOneId,
+          },
+        ],
+      },
+      defaults: {
+        userOneId: +data.userOneId,
+        userTwoId: +data.userTwoId,
+      },
+      include: [
+        {
+          model: Message,
+          limit: 1,
+          order: [['createdAt', 'DESC']],
+        },
+        {
+          model: User,
+          as: 'userOne',
+          required: false,
+          where: {
+            [Op.not]: {
+              id: token.userId,
+            },
+          },
+        },
+        {
+          model: User,
+          as: 'userTwo',
+          required: false,
+          where: {
+            [Op.not]: {
+              id: token.userId,
+            },
+          },
+        },
+      ],
+    });
+
     return chat;
   }
 }

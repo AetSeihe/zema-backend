@@ -274,8 +274,6 @@ export class PostService {
       include: [Post],
     });
 
-    console.log(JSON.stringify(token, null, 2));
-    console.log(JSON.stringify(comment, null, 2));
     if (comment.userId != token.userId) {
       if (token.userId != comment.post.userId) {
         throw new ForbiddenException();

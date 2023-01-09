@@ -8,8 +8,9 @@ import {
 import { Op } from 'sequelize';
 import { JwtPayloadType } from 'src/auth/types/JwtPayload.type';
 import { City } from 'src/city/entity/City.entity';
-import { VACANCY_REPOSITORY } from 'src/core/providers-names';
+import { VACANCY_REPOSITORY, VACANCY_SKILLS } from 'src/core/providers-names';
 import { locale } from 'src/locale';
+import { GetResumeResponseDTO } from 'src/resume/dto/get-one-resume';
 import { User } from 'src/user/entity/User.entity';
 import { UserImage } from 'src/user/entity/UserImage.entity';
 import { UserMainImage } from 'src/user/entity/UserMainImage';
@@ -19,8 +20,8 @@ import {
   GetAllVacancyDataDTO,
   GetAllVacancyOptionsDTO,
 } from './dto/get-all.dto';
-import { GetVacancyResponseDTO } from './dto/get-one-resume';
 import { VacancyDTO } from './dto/vacancy.dto';
+import { Skills } from './entity/skills';
 import { Vacancy } from './entity/vacancy.enity';
 
 const vacancyLocale = locale.vacancy;
@@ -28,7 +29,9 @@ const vacancyLocale = locale.vacancy;
 export class VacancyService {
   constructor(
     @Inject(VACANCY_REPOSITORY)
-    private readonly resumeRepository: typeof Vacancy,
+    private readonly vacancyRepository: typeof Vacancy,
+    @Inject(VACANCY_SKILLS)
+    private readonly skillsRepository: typeof Skills,
   ) {}
 
   async getAll(data: GetAllVacancyDataDTO, options: GetAllVacancyOptionsDTO) {
@@ -41,12 +44,13 @@ export class VacancyService {
       ...currentData
     } = data;
 
-    const resumes = await this.resumeRepository.findAll({
+    const vacancys = await this.vacancyRepository.findAll({
       limit: options.limit || 15,
       offset: options.offset || 0,
       order: [['createdAt', options.sortBy || 'DESC']],
       include: [
         City,
+        Skills,
         {
           model: User,
           include: [
@@ -71,7 +75,7 @@ export class VacancyService {
             },
           },
         ],
-        salary: {
+        minSalary: {
           [Op.between]: [salaryMin || 0, salaryMax || 1000000],
         },
         workExperience: {
@@ -80,8 +84,8 @@ export class VacancyService {
       },
     });
 
-    const currentVacancies = resumes.map(
-      (resume) => new VacancyDTO(resume.get()),
+    const currentVacancies = vacancys.map(
+      (vacancy) => new VacancyDTO(vacancy.get()),
     );
 
     return new GetAllVacancyResponseDTO({
@@ -90,10 +94,11 @@ export class VacancyService {
     });
   }
 
-  async getResumeById(resumeId: number) {
-    const vacancy = await this.resumeRepository.findByPk(resumeId, {
+  async getVacancyById(vacancyId: number) {
+    const vacancy = await this.vacancyRepository.findByPk(vacancyId, {
       include: [
         City,
+        Skills,
         {
           model: User,
           include: [
@@ -110,14 +115,16 @@ export class VacancyService {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
 
-    return new GetVacancyResponseDTO({
+    return new GetResumeResponseDTO({
       message: vacancyLocale.byId,
       vacancy: new VacancyDTO(vacancy.get()),
     });
   }
-  async createResume(token: JwtPayloadType, options: CreateResumeDTO) {
-    console.log('I work in vancancy!', JSON.stringify(options, null, 2));
-    const vacancy = await this.resumeRepository.create({
+  async createVacancy(
+    token: JwtPayloadType,
+    { skills, ...options }: CreateResumeDTO,
+  ) {
+    const vacancy = await this.vacancyRepository.create({
       userId: token.userId,
       title: options.title,
       description: options.description,
@@ -125,17 +132,32 @@ export class VacancyService {
       cityId: options.cityId,
       phone: options.phone ?? '',
       email: options.email ?? '',
-      salary: +options.salary,
+      minSalary: +options.minSalary,
+      maxSalary: +options.maxSalary,
+      employment: options.employment,
+      workFormat: options.workFormat,
+      companyName: options.companyName,
+      descriptionCompany: options.descriptionCompany,
+      companyUrl: options.companyUrl,
+      requirement: options.requirement,
+      responsibilities: options.responsibilities,
     });
 
-    return new GetVacancyResponseDTO({
+    skills.forEach((item) => {
+      this.skillsRepository.create({
+        title: item,
+        vacancyId: vacancy.id,
+      });
+    });
+
+    return new GetResumeResponseDTO({
       message: vacancyLocale.create,
       vacancy: new VacancyDTO(vacancy.get()),
     });
   }
 
-  async deleteResumeById(res: JwtPayloadType, resumeId: number) {
-    const vacancy = await this.resumeRepository.findByPk(resumeId);
+  async deleteVacancyById(res: JwtPayloadType, vacancyId: number) {
+    const vacancy = await this.vacancyRepository.findByPk(vacancyId);
     if (!vacancy) {
       throw new HttpException('NOT_FOUND', HttpStatus.NOT_FOUND);
     }
@@ -145,7 +167,7 @@ export class VacancyService {
 
     await vacancy.destroy();
 
-    return new GetVacancyResponseDTO({
+    return new GetResumeResponseDTO({
       message: vacancyLocale.delete,
       vacancy: new VacancyDTO(vacancy.get()),
     });
